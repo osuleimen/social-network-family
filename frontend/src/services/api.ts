@@ -1,0 +1,203 @@
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { AuthResponse, ApiError } from '../types';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+class ApiClient {
+  private client: AxiosInstance;
+
+  constructor() {
+    this.client = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Request interceptor to add auth token
+    this.client.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor to handle token refresh
+    this.client.interceptors.response.use(
+      (response: AxiosResponse) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken) {
+              const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+                headers: {
+                  Authorization: `Bearer ${refreshToken}`,
+                },
+              });
+
+              const { access_token } = response.data;
+              localStorage.setItem('access_token', access_token);
+              
+              originalRequest.headers.Authorization = `Bearer ${access_token}`;
+              return this.client(originalRequest);
+            }
+          } catch (refreshError) {
+            // Refresh token failed, redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  // Auth endpoints
+  async login(username: string, password: string): Promise<AuthResponse> {
+    const response = await this.client.post('/auth/login', { username, password });
+    return response.data;
+  }
+
+  async register(userData: {
+    username: string;
+    email: string;
+    password: string;
+    first_name: string;
+    last_name: string;
+    bio?: string;
+    gramps_person_id?: string;
+    gramps_tree_id?: string;
+  }): Promise<AuthResponse> {
+    const response = await this.client.post('/auth/register', userData);
+    return response.data;
+  }
+
+  async getCurrentUser() {
+    const response = await this.client.get('/auth/me');
+    return response.data;
+  }
+
+  async logout() {
+    const response = await this.client.post('/auth/logout');
+    return response.data;
+  }
+
+  // User endpoints
+  async getUsers(params?: { page?: number; per_page?: number; search?: string }) {
+    const response = await this.client.get('/users', { params });
+    return response.data;
+  }
+
+  async getUser(userId: number) {
+    const response = await this.client.get(`/users/${userId}`);
+    return response.data;
+  }
+
+  async updateProfile(userData: Partial<{
+    first_name: string;
+    last_name: string;
+    bio: string;
+    avatar_url: string;
+    gramps_person_id: string;
+    gramps_tree_id: string;
+  }>) {
+    const response = await this.client.put('/users/me', userData);
+    return response.data;
+  }
+
+  async followUser(userId: number) {
+    const response = await this.client.post(`/users/${userId}/follow`);
+    return response.data;
+  }
+
+  async unfollowUser(userId: number) {
+    const response = await this.client.post(`/users/${userId}/unfollow`);
+    return response.data;
+  }
+
+  async getFollowers(userId: number, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get(`/users/${userId}/followers`, { params });
+    return response.data;
+  }
+
+  async getFollowing(userId: number, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get(`/users/${userId}/following`, { params });
+    return response.data;
+  }
+
+  // Post endpoints
+  async createPost(postData: { content: string; is_public?: boolean }) {
+    const response = await this.client.post('/posts', postData);
+    return response.data;
+  }
+
+  async getPost(postId: number) {
+    const response = await this.client.get(`/posts/${postId}`);
+    return response.data;
+  }
+
+  async updatePost(postId: number, postData: Partial<{ content: string; is_public: boolean }>) {
+    const response = await this.client.put(`/posts/${postId}`, postData);
+    return response.data;
+  }
+
+  async deletePost(postId: number) {
+    const response = await this.client.delete(`/posts/${postId}`);
+    return response.data;
+  }
+
+  async likePost(postId: number) {
+    const response = await this.client.post(`/posts/${postId}/like`);
+    return response.data;
+  }
+
+  async unlikePost(postId: number) {
+    const response = await this.client.post(`/posts/${postId}/unlike`);
+    return response.data;
+  }
+
+  async createComment(postId: number, commentData: { content: string; parent_id?: number }) {
+    const response = await this.client.post(`/posts/${postId}/comments`, commentData);
+    return response.data;
+  }
+
+  async getComments(postId: number, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get(`/posts/${postId}/comments`, { params });
+    return response.data;
+  }
+
+  // Feed endpoints
+  async getFeed(params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get('/feed', { params });
+    return response.data;
+  }
+
+  async getExploreFeed(params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get('/feed/explore', { params });
+    return response.data;
+  }
+
+  async searchPosts(query: string, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get('/feed/search', { 
+      params: { q: query, ...params } 
+    });
+    return response.data;
+  }
+}
+
+export const apiClient = new ApiClient();
+export default apiClient;
