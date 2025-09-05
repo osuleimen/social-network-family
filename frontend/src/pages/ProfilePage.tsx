@@ -201,7 +201,7 @@ const ProfilePage = () => {
             </p>
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          posts.map((post: any) => <PostCard key={post.id} post={post} />)
         )}
       </div>
     </div>

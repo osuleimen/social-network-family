@@ -15,13 +15,9 @@ const FeedPage = () => {
     data: feedData,
     isLoading,
     error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
   } = useQuery({
-    queryKey: ['feed', page],
-    queryFn: () => apiClient.getFeed({ page, per_page: 10 }),
-    keepPreviousData: true,
+    queryKey: ['feed'],
+    queryFn: () => apiClient.getFeed({ page: 1, per_page: 50 }),
   });
 
   const createPostMutation = useMutation({
@@ -60,33 +56,18 @@ const FeedPage = () => {
 
       {/* Posts */}
       <div className="space-y-6">
-        {posts.length === 0 ? (
+        {feedData?.posts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
               No posts yet. Follow some users to see their posts in your feed!
             </p>
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          feedData?.posts.map((post: any) => <PostCard key={post.id} post={post} />)
         )}
       </div>
 
-      {/* Load More */}
-      {hasNextPage && (
-        <div className="text-center">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="btn btn-outline"
-          >
-            {isFetchingNextPage ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Load More'
-            )}
-          </button>
-        </div>
-      )}
+
     </div>
   );
 };

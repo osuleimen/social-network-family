@@ -1,37 +1,32 @@
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app import db
-from datetime import datetime
 
 class Comment(db.Model):
-    """Comment model for social network"""
-    __tablename__ = 'comments'
+    __tablename__ = 'social_comments'
     
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('comments.id'))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id = Column(Integer, primary_key=True)
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey('social_users.id'), nullable=False)
+    post_id = Column(Integer, ForeignKey('social_posts.id'), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # Self-referential relationship for nested comments
-    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
+    # Relationships
+    author = relationship('User', backref='comments')
     
-    def to_dict(self, include_author=True):
+    def to_dict(self):
         """Convert comment to dictionary"""
-        data = {
+        return {
             'id': self.id,
             'content': self.content,
+            'author_id': self.author_id,
+            'author': self.author.to_dict() if self.author else None,
             'post_id': self.post_id,
-            'parent_id': self.parent_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'replies_count': len(self.replies)
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
-        
-        if include_author:
-            data['author'] = self.author.to_dict()
-        
-        return data
     
     def __repr__(self):
         return f'<Comment {self.id} by {self.author.username}>'

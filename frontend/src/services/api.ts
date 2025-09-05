@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { AuthResponse, ApiError } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'https://my.ozimiz.org/api';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -57,7 +57,7 @@ class ApiClient {
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.location.href = '/auth';
           }
         }
 
@@ -66,26 +66,7 @@ class ApiClient {
     );
   }
 
-  // Auth endpoints
-  async login(username: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post('/auth/login', { username, password });
-    return response.data;
-  }
-
-  async register(userData: {
-    username: string;
-    email: string;
-    password: string;
-    first_name: string;
-    last_name: string;
-    bio?: string;
-    gramps_person_id?: string;
-    gramps_tree_id?: string;
-  }): Promise<AuthResponse> {
-    const response = await this.client.post('/auth/register', userData);
-    return response.data;
-  }
-
+  // User endpoints
   async getCurrentUser() {
     const response = await this.client.get('/auth/me');
     return response.data;
@@ -96,7 +77,6 @@ class ApiClient {
     return response.data;
   }
 
-  // User endpoints
   async getUsers(params?: { page?: number; per_page?: number; search?: string }) {
     const response = await this.client.get('/users', { params });
     return response.data;
@@ -170,13 +150,54 @@ class ApiClient {
     return response.data;
   }
 
-  async createComment(postId: number, commentData: { content: string; parent_id?: number }) {
-    const response = await this.client.post(`/posts/${postId}/comments`, commentData);
+  // Comment endpoints
+  async createComment(postId: number, commentData: { content: string }) {
+    const response = await this.client.post(`/post/${postId}/comments`, commentData);
     return response.data;
   }
 
-  async getComments(postId: number, params?: { page?: number; per_page?: number }) {
-    const response = await this.client.get(`/posts/${postId}/comments`, { params });
+  async getComments(postId: number) {
+    const response = await this.client.get(`/post/${postId}/comments`);
+    return response.data;
+  }
+
+  async updateComment(commentId: number, commentData: { content: string }) {
+    const response = await this.client.put(`/comments/${commentId}`, commentData);
+    return response.data;
+  }
+
+  async deleteComment(commentId: number) {
+    const response = await this.client.delete(`/comments/${commentId}`);
+    return response.data;
+  }
+
+  // Media endpoints
+  async uploadMediaToPost(postId: number, files: FileList) {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    const response = await this.client.post(`/posts/${postId}/media`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async getPostMedia(postId: number) {
+    const response = await this.client.get(`/posts/${postId}/media`);
+    return response.data;
+  }
+
+  async deleteMedia(mediaId: number) {
+    const response = await this.client.delete(`/media/${mediaId}`);
+    return response.data;
+  }
+
+  async getMediaUrl(mediaId: number) {
+    const response = await this.client.get(`/media/${mediaId}/url`);
     return response.data;
   }
 
@@ -195,6 +216,35 @@ class ApiClient {
     const response = await this.client.get('/feed/search', { 
       params: { q: query, ...params } 
     });
+    return response.data;
+  }
+
+  // Utility method to set auth token
+  setAuthToken(token: string) {
+    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Utility method to remove auth token
+  removeAuthToken() {
+    delete this.client.defaults.headers.common['Authorization'];
+  }
+
+  // SMS Authentication methods
+  async requestSMSCode(phone_number: string) {
+    const response = await this.client.post('/sms-auth/request-code', { phone_number });
+    return response.data;
+  }
+
+  async verifySMSCode(phone_number: string, verification_code: string) {
+    const response = await this.client.post('/sms-auth/verify-code', { 
+      phone_number, 
+      verification_code 
+    });
+    return response.data;
+  }
+
+  async resendSMSCode(phone_number: string) {
+    const response = await this.client.post('/sms-auth/resend-code', { phone_number });
     return response.data;
   }
 }

@@ -3,8 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Post } from '../types';
 import apiClient from '../services/api';
-import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Image, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import CommentsSection from './CommentsSection';
+import MediaGallery from './MediaGallery';
+import MediaUpload from './MediaUpload';
 
 interface PostCardProps {
   post: Post;
@@ -17,6 +20,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
 
   const likeMutation = useMutation({
     mutationFn: () => apiClient.likePost(post.id),
@@ -50,6 +54,14 @@ const PostCard = ({ post }: PostCardProps) => {
     },
   });
 
+  const deleteMediaMutation = useMutation({
+    mutationFn: (mediaId: number) => apiClient.deleteMedia(mediaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['feed']);
+      queryClient.invalidateQueries(['post', post.id]);
+    },
+  });
+
   const handleLike = () => {
     if (post.likes_count > 0) {
       unlikeMutation.mutate();
@@ -71,6 +83,10 @@ const PostCard = ({ post }: PostCardProps) => {
       setIsEditing(false);
       setEditContent(post.content);
     }
+  };
+
+  const handleDeleteMedia = (mediaId: number) => {
+    deleteMediaMutation.mutate(mediaId);
   };
 
   const isOwnPost = user?.id === post.author.id;
@@ -117,6 +133,16 @@ const PostCard = ({ post }: PostCardProps) => {
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMediaUpload(true);
+                      setShowMenu(false);
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Image className="h-4 w-4 mr-2" />
+                    Add Photos
                   </button>
                   <button
                     onClick={() => {
@@ -182,6 +208,68 @@ const PostCard = ({ post }: PostCardProps) => {
         )}
       </div>
 
+      {/* Media Gallery */}
+      {post.media && post.media.length > 0 && (
+        <div className="mb-4">
+          <MediaGallery
+            media={post.media}
+            canDelete={isOwnPost}
+            onDeleteMedia={handleDeleteMedia}
+          />
+        </div>
+      )}
+
+      {/* Media Management Buttons */}
+      {isOwnPost && (
+        <div className="flex items-center space-x-3 mb-4">
+          <button
+            onClick={() => setShowMediaUpload(!showMediaUpload)}
+            className="flex items-center space-x-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+          >
+            <Image className="h-4 w-4" />
+            <span>
+              {post.media && post.media.length > 0 
+                ? `Manage Photos (${post.media.length})`
+                : 'Add Photos'
+              }
+            </span>
+          </button>
+          
+          {post.media && post.media.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to remove all photos from this post?')) {
+                  post.media.forEach(media => handleDeleteMedia(media.id));
+                }
+              }}
+              className="flex items-center space-x-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Remove All Photos</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Media Upload Section */}
+      {showMediaUpload && isOwnPost && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white">Add Photos</h4>
+            <button
+              onClick={() => setShowMediaUpload(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <MediaUpload
+            postId={post.id}
+            onUploadComplete={() => setShowMediaUpload(false)}
+          />
+        </div>
+      )}
+
       {/* Post Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-6">
@@ -211,9 +299,7 @@ const PostCard = ({ post }: PostCardProps) => {
       {/* Comments Section */}
       {showComments && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-            Comments feature coming soon...
-          </p>
+          <CommentsSection postId={post.id} />
         </div>
       )}
     </div>

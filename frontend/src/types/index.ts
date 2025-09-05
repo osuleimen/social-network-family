@@ -17,6 +17,20 @@ export interface User {
   is_following?: boolean;
 }
 
+export interface Media {
+  id: number;
+  filename: string;
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  gramps_media_id?: string;
+  gramps_url?: string;
+  post_id: number;
+  uploaded_by: number;
+  uploader: User;
+  created_at: string;
+}
+
 export interface Post {
   id: number;
   content: string;
@@ -26,17 +40,17 @@ export interface Post {
   author: User;
   likes_count: number;
   comments_count: number;
+  media: Media[];
 }
 
 export interface Comment {
   id: number;
   content: string;
   post_id: number;
-  parent_id?: number;
+  author_id: number;
   created_at: string;
   updated_at: string;
   author: User;
-  replies_count: number;
 }
 
 export interface Like {
@@ -65,7 +79,7 @@ export interface Notification {
 }
 
 export interface PaginatedResponse<T> {
-  [key: string]: T[];
+  data: T[];
   total: number;
   pages: number;
   current_page: number;

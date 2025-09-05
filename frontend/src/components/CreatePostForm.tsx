@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Eye, EyeOff } from 'lucide-react';
+import { Send, Eye, EyeOff, Image, X } from 'lucide-react';
+import MediaUpload from './MediaUpload';
 
 const postSchema = z.object({
   content: z.string().min(1, 'Post content is required').max(1000, 'Post is too long'),
@@ -11,13 +12,16 @@ const postSchema = z.object({
 type PostFormData = z.infer<typeof postSchema>;
 
 interface CreatePostFormProps {
-  onSubmit: (content: string, isPublic: boolean) => void;
+  onSubmit: (content: string, isPublic: boolean, postId?: number) => void;
   isLoading?: boolean;
 }
 
 const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
   const [isPublic, setIsPublic] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [createdPostId, setCreatedPostId] = useState<number | null>(null);
 
   const {
     register,
@@ -34,6 +38,13 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
   const handleFormSubmit = (data: PostFormData) => {
     onSubmit(data.content, isPublic);
     reset();
+    setSelectedFiles([]);
+    setShowMediaUpload(false);
+    setCreatedPostId(null);
+  };
+
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files);
   };
 
   return (
@@ -51,6 +62,25 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.content.message}</p>
           )}
         </div>
+
+        {/* Media Upload Section */}
+        {showMediaUpload && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Add Photos</h4>
+              <button
+                type="button"
+                onClick={() => setShowMediaUpload(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <MediaUpload
+              onFilesSelected={handleFilesSelected}
+            />
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -71,6 +101,25 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
                   <span>Private</span>
                 </>
               )}
+            </button>
+
+            {/* Media toggle */}
+            <button
+              type="button"
+              onClick={() => setShowMediaUpload(!showMediaUpload)}
+              className={`flex items-center space-x-2 text-sm transition-colors ${
+                showMediaUpload || selectedFiles.length > 0
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Image className="h-4 w-4" />
+              <span>
+                {selectedFiles.length > 0 
+                  ? `${selectedFiles.length} photo${selectedFiles.length > 1 ? 's' : ''}`
+                  : 'Add Photos'
+                }
+              </span>
             </button>
 
             {/* Preview toggle */}

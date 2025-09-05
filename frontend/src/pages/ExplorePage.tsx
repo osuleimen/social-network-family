@@ -11,13 +11,9 @@ const ExplorePage = () => {
     data: exploreData,
     isLoading,
     error,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
   } = useQuery({
-    queryKey: ['explore', page],
-    queryFn: () => apiClient.getExploreFeed({ page, per_page: 10 }),
-    keepPreviousData: true,
+    queryKey: ['explore'],
+    queryFn: () => apiClient.getExploreFeed({ page: 1, per_page: 50 }),
   });
 
   if (isLoading) {
@@ -56,26 +52,11 @@ const ExplorePage = () => {
             </p>
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          posts.map((post: any) => <PostCard key={post.id} post={post} />)
         )}
       </div>
 
-      {/* Load More */}
-      {hasNextPage && (
-        <div className="text-center">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="btn btn-outline"
-          >
-            {isFetchingNextPage ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Load More'
-            )}
-          </button>
-        </div>
-      )}
+
     </div>
   );
 };
