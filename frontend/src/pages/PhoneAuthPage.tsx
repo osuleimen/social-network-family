@@ -163,12 +163,21 @@ const PhoneAuthPage = () => {
     // Remove all non-digit characters
     let digits = value.replace(/\D/g, '');
     
-    // Handle different input scenarios
+    // Handle different input scenarios for Kazakhstan numbers
     if (digits.startsWith('8')) {
-      // Replace 8 with 7 (Russian format)
+      // Replace 8 with 7 (Russian format: 8XXXXXXXXXX -> 7XXXXXXXXXX)
       digits = '7' + digits.slice(1);
-    } else if (!digits.startsWith('7') && digits.length > 0) {
-      // Add 7 prefix if missing
+    } else if (digits.startsWith('7')) {
+      // Check if it's malformed like 70199904387 (from +7 019 990 43 8)
+      if (digits.length === 11 && digits.startsWith('70')) {
+        // Remove the leading 0: 70199904387 -> 7199904387
+        digits = '7' + digits.slice(2);
+      }
+    } else if (digits.length === 10) {
+      // Add 7 prefix for 10-digit numbers (assuming Kazakhstan mobile)
+      digits = '7' + digits;
+    } else if (digits.length > 0 && !digits.startsWith('7')) {
+      // For other cases, prepend 7
       digits = '7' + digits;
     }
     
