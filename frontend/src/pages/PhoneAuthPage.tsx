@@ -24,13 +24,14 @@ const phoneSchema = z.object({
       } else if (digits.startsWith('7') && digits.length === 11) {
         // 7XXXXXXXXXX - уже правильный формат
         digits = digits;
-      } else if (digits.length === 10) {
-        // XXXXXXXXXX -> 7XXXXXXXXXX
+      } else if (digits.length === 10 && !digits.startsWith('7')) {
+        // XXXXXXXXXX -> 7XXXXXXXXXX (только если не начинается с 7)
         digits = '7' + digits;
       } else if (digits.startsWith('70') && digits.length === 11) {
         // 70XXXXXXXXX -> 7XXXXXXXXXX (убираем лишний 0)
         digits = '7' + digits.slice(2);
       }
+      // Не добавляем 7 автоматически для других случаев
       
       return digits;
     })
@@ -193,16 +194,14 @@ const PhoneAuthPage = () => {
     } else if (digits.startsWith('7') && digits.length === 11) {
       // 7XXXXXXXXXX - уже правильный формат
       digits = digits;
-    } else if (digits.length === 10) {
-      // XXXXXXXXXX -> 7XXXXXXXXXX (10 цифр без кода страны)
+    } else if (digits.length === 10 && !digits.startsWith('7')) {
+      // XXXXXXXXXX -> 7XXXXXXXXXX (10 цифр без кода страны, только если не начинается с 7)
       digits = '7' + digits;
     } else if (digits.startsWith('70') && digits.length === 11) {
       // 70XXXXXXXXX -> 7XXXXXXXXXX (убираем лишний 0)
       digits = '7' + digits.slice(2);
-    } else if (digits.length > 0 && !digits.startsWith('7') && !digits.startsWith('8')) {
-      // Для других случаев добавляем 7 в начало
-      digits = '7' + digits;
     }
+    // Убираем агрессивное добавление 7 для всех остальных случаев
     
     // Ограничиваем максимальную длину до 11 цифр
     if (digits.length > 11) {

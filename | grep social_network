@@ -1,0 +1,3 @@
+[33mc241b76[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m Add version display and update to v1.2.0
+[33m8c556df[m fix: add .env.backup
+[33md367dcc[m Fix phone number paste handling and SMS connection issues
