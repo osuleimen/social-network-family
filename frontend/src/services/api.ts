@@ -231,12 +231,12 @@ class ApiClient {
 
   // SMS Authentication methods
   async requestSMSCode(phone_number: string) {
-    const response = await this.client.post('/sms-auth/request-code', { phone_number });
+    const response = await this.client.post('/auth/request-code', { phone_number });
     return response.data;
   }
 
   async verifySMSCode(phone_number: string, verification_code: string) {
-    const response = await this.client.post('/sms-auth/verify-code', { 
+    const response = await this.client.post('/auth/verify-code', { 
       phone_number, 
       verification_code 
     });
@@ -244,7 +244,7 @@ class ApiClient {
   }
 
   async resendSMSCode(phone_number: string) {
-    const response = await this.client.post('/sms-auth/resend-code', { phone_number });
+    const response = await this.client.post('/auth/resend-code', { phone_number });
     return response.data;
   }
 }

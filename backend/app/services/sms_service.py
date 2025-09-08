@@ -64,6 +64,18 @@ class MobizonSMSService:
             # Message text in Russian
             message = f"Ваш код подтверждения: {code}. Не сообщайте его никому."
             
+            # Debug mode - skip actual SMS sending
+            if self.debug_mode:
+                logger.info(f"DEBUG MODE: SMS would be sent to {formatted_phone} with code {code}")
+                logger.info(f"DEBUG MODE: Message: {message}")
+                return {
+                    'success': True,
+                    'message': 'SMS sent successfully (DEBUG MODE)',
+                    'message_id': 'debug-' + str(hash(code)),
+                    'phone': formatted_phone,
+                    'code': code
+                }
+            
             # Mobizon API parameters
             params = {
                 'apiKey': self.api_key,

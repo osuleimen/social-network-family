@@ -13,9 +13,32 @@ import { Phone, MessageSquare, RotateCcw, CheckCircle, Moon, Sun } from 'lucide-
 const phoneSchema = z.object({
   phone_number: z.string()
     .min(1, 'Номер телефона обязателен')
-    .transform((val) => val.replace(/\D/g, '')) // Убираем все не-цифры для валидации
-    .refine((val) => /^7[0-9]{10}$/.test(val), {
-      message: 'Введите корректный казахстанский номер телефона'
+    .transform((val) => {
+      // Нормализуем номер: убираем все не-цифры
+      let digits = val.replace(/\D/g, '');
+      
+      // Обрабатываем различные форматы ввода
+      if (digits.startsWith('8') && digits.length === 11) {
+        // 8XXXXXXXXXX -> 7XXXXXXXXXX
+        digits = '7' + digits.slice(1);
+      } else if (digits.startsWith('7') && digits.length === 11) {
+        // 7XXXXXXXXXX - уже правильный формат
+        digits = digits;
+      } else if (digits.length === 10) {
+        // XXXXXXXXXX -> 7XXXXXXXXXX
+        digits = '7' + digits;
+      } else if (digits.startsWith('70') && digits.length === 11) {
+        // 70XXXXXXXXX -> 7XXXXXXXXXX (убираем лишний 0)
+        digits = '7' + digits.slice(2);
+      }
+      
+      return digits;
+    })
+    .refine((val) => {
+      // Проверяем, что это валидный казахстанский номер
+      return /^7[0-9]{10}$/.test(val) && val.length === 11;
+    }, {
+      message: 'Введите корректный казахстанский номер телефона (например: +7 777 777 77 77)'
     })
 });
 
@@ -164,29 +187,29 @@ const PhoneAuthPage = () => {
     let digits = value.replace(/\D/g, '');
     
     // Handle different input scenarios for Kazakhstan numbers
-    if (digits.startsWith('8')) {
-      // Replace 8 with 7 (Russian format: 8XXXXXXXXXX -> 7XXXXXXXXXX)
+    if (digits.startsWith('8') && digits.length === 11) {
+      // 8XXXXXXXXXX -> 7XXXXXXXXXX (Russian format)
       digits = '7' + digits.slice(1);
-    } else if (digits.startsWith('7')) {
-      // Check if it's malformed like 70199904387 (from +7 019 990 43 8)
-      if (digits.length === 11 && digits.startsWith('70')) {
-        // Remove the leading 0: 70199904387 -> 7199904387
-        digits = '7' + digits.slice(2);
-      }
+    } else if (digits.startsWith('7') && digits.length === 11) {
+      // 7XXXXXXXXXX - уже правильный формат
+      digits = digits;
     } else if (digits.length === 10) {
-      // Add 7 prefix for 10-digit numbers (assuming Kazakhstan mobile)
+      // XXXXXXXXXX -> 7XXXXXXXXXX (10 цифр без кода страны)
       digits = '7' + digits;
-    } else if (digits.length > 0 && !digits.startsWith('7')) {
-      // For other cases, prepend 7
+    } else if (digits.startsWith('70') && digits.length === 11) {
+      // 70XXXXXXXXX -> 7XXXXXXXXXX (убираем лишний 0)
+      digits = '7' + digits.slice(2);
+    } else if (digits.length > 0 && !digits.startsWith('7') && !digits.startsWith('8')) {
+      // Для других случаев добавляем 7 в начало
       digits = '7' + digits;
     }
     
-    // Ensure we don't exceed 11 digits (7 + 10 digits)
+    // Ограничиваем максимальную длину до 11 цифр
     if (digits.length > 11) {
       digits = digits.slice(0, 11);
     }
     
-    // Format as +7 XXX XXX XX XX (like WhatsApp/Telegram)
+    // Форматируем как +7 XXX XXX XX XX (как в WhatsApp/Telegram)
     if (digits.length === 0) return '';
     if (digits.length === 1) return '+7';
     if (digits.length <= 4) return `+7 ${digits.slice(1)}`;
@@ -358,7 +381,7 @@ const PhoneAuthPage = () => {
               )}
 
               {/* Resend code section */}
-              <div className="text-center">
+                <div className="text-center">
                 {isWaitingForExistingCode ? (
                   // Для случая ожидания существующего кода
                   <div className="space-y-3">
@@ -390,8 +413,8 @@ const PhoneAuthPage = () => {
                       {resendCodeMutation.isLoading ? 'Отправка...' : 'Отправить код повторно'}
                     </button>
                   )
-                )}
-              </div>
+                  )}
+                </div>
 
               {/* Back to phone */}
               <div className="text-center">
