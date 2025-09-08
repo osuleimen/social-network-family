@@ -248,6 +248,9 @@ const PhoneAuthPage = () => {
                 : `Введите код из SMS, отправленного на ${phoneNumber}`
               }
             </p>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
+              v1.2.0 - Phone validation improved
+            </div>
           </div>
 
           {/* Error message */}
