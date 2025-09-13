@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import PhoneAuthPage from './pages/PhoneAuthPage';
+import UnifiedAuthPage from './pages/UnifiedAuthPage';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
 import ProfilePage from './pages/ProfilePage';
@@ -62,7 +62,7 @@ function App() {
                   path="/auth"
                   element={
                     <PublicRoute>
-                      <PhoneAuthPage />
+                      <UnifiedAuthPage />
                     </PublicRoute>
                   }
                 />
@@ -120,6 +120,11 @@ function App() {
                 {/* Fallback route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              
+              {/* Version info */}
+      <div className="fixed bottom-2 right-2 text-xs text-red-600 bg-yellow-200 px-3 py-2 rounded shadow-lg border-2 border-red-500 font-bold">
+        v1.2.2 - НОВАЯ ВЕРСИЯ - {new Date().toLocaleString()}
+      </div>
             </div>
           </Router>
         </AuthProvider>

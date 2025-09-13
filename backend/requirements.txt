@@ -14,3 +14,7 @@ flask-marshmallow==0.15.0
 marshmallow-sqlalchemy==0.29.0
 gunicorn==21.2.0
 requests==2.31.0
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
+bcrypt==4.0.1

@@ -46,8 +46,8 @@ const phoneSchema = z.object({
 // Verification code schema
 const codeSchema = z.object({
   verification_code: z.string()
-    .min(4, 'Код должен содержать 4 цифры')
-    .max(4, 'Код должен содержать 4 цифры')
+    .min(6, 'Код должен содержать 6 цифр')
+    .max(6, 'Код должен содержать 6 цифр')
     .regex(/^[0-9]+$/, 'Код должен содержать только цифры')
 });
 
@@ -81,7 +81,9 @@ const PhoneAuthPage = () => {
   const requestCodeMutation = useMutation({
     mutationFn: (data: PhoneFormData) => apiClient.requestSMSCode(data.phone_number),
     onSuccess: (data) => {
-      setPhoneNumber(data.phone_number);
+      // Handle both old format (phone_number) and new format (identifier)
+      const phoneNumber = data.phone_number || data.identifier;
+      setPhoneNumber(phoneNumber);
       setIsNewUser(data.is_new_user);
       setStep('verification');
       setError('');
@@ -335,11 +337,11 @@ const PhoneAuthPage = () => {
                   <input
                     {...codeForm.register('verification_code')}
                     type="text"
-                    placeholder="0000"
-                    maxLength={4}
+                    placeholder="000000"
+                    maxLength={6}
                     className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-center text-2xl font-mono tracking-widest transition-all"
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                       codeForm.setValue('verification_code', value);
                     }}
                   />

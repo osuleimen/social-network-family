@@ -5,6 +5,7 @@ import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import os
+from .error_handler import auth_error_handler, retry_on_failure
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,12 @@ class MobizonSMSService:
         self.api_key = os.getenv('MOBIZON_API_KEY')
         if not self.api_key:
             logger.warning("MOBIZON_API_KEY not set in environment variables")
+        # Correct Mobizon API endpoint according to documentation
         self.base_url = 'https://api.mobizon.kz/service/message/sendsmsmessage'
         self.timeout = int(os.getenv('SMS_SERVICE_TIMEOUT', '30'))
         self.debug_mode = os.getenv('SMS_DEBUG_MODE', 'false').lower() == 'true'
         
-    def generate_verification_code(self, length: int = 4) -> str:
+    def generate_verification_code(self, length: int = 6) -> str:
         """Generate a random verification code"""
         return ''.join(random.choices(string.digits, k=length))
     
@@ -47,9 +49,60 @@ class MobizonSMSService:
         
         return phone if phone.startswith('+') else f"+{phone}"
     
+    def _send_sms_request(self, formatted_phone: str, message: str) -> Dict[str, Any]:
+        """
+        Internal method to send SMS request to Mobizon API with retry logic
+        
+        Args:
+            formatted_phone: Phone number in international format
+            message: SMS message text
+            
+        Returns:
+            Dictionary with send result
+        """
+        # Mobizon API parameters according to documentation
+        params = {
+            'apiKey': self.api_key,
+            'recipient': formatted_phone.replace('+', ''),  # Remove + for Mobizon
+            'text': message
+        }
+        
+        logger.info(f"📱 SMS Request: Sending SMS to {formatted_phone}")
+        logger.info(f"📱 SMS Request: Mobizon API URL: {self.base_url}")
+        logger.info(f"📱 SMS Request: Mobizon API params: {params}")
+        
+        # Send request to Mobizon API
+        response = requests.post(self.base_url, data=params, timeout=self.timeout)
+        
+        logger.info(f"📱 SMS Response: Status {response.status_code}")
+        logger.info(f"📱 SMS Response: Text {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"📱 SMS Response: JSON {result}")
+            
+            # Check if the response indicates success
+            if result.get('code') == 0:  # Success according to Mobizon API
+                logger.info(f"✅ SMS Success: Sent to {formatted_phone}, Message ID: {result.get('data', {}).get('messageId')}")
+                return {
+                    'success': True,
+                    'message': 'SMS sent successfully',
+                    'message_id': result.get('data', {}).get('messageId'),
+                    'phone': formatted_phone
+                }
+            else:
+                error_msg = result.get('message', 'Unknown error')
+                error_code = result.get('code', 'Unknown code')
+                logger.error(f"❌ SMS Error: Mobizon API error {error_code} - {error_msg}")
+                raise Exception(f"Mobizon API error {error_code}: {error_msg}")
+        else:
+            logger.error(f"❌ SMS Error: HTTP {response.status_code}: {response.text}")
+            raise Exception(f"HTTP error: {response.status_code} - {response.text}")
+
+    @retry_on_failure(max_retries=3, delay=1.0, backoff=2.0)
     def send_verification_sms(self, phone: str, code: str) -> Dict[str, Any]:
         """
-        Send verification SMS via Mobizon API
+        Send verification SMS via Mobizon API with retry logic
         
         Args:
             phone: Phone number in international format
@@ -76,65 +129,20 @@ class MobizonSMSService:
                     'code': code
                 }
             
-            # Mobizon API parameters
-            params = {
-                'apiKey': self.api_key,
-                'recipient': formatted_phone.replace('+', ''),  # Убираем + для Mobizon
-                'text': message
-            }
-            
-            logger.info(f"Sending SMS to {formatted_phone} with code {code}")
-            logger.info(f"Mobizon API URL: {self.base_url}")
-            logger.info(f"Mobizon API params: {params}")
-            
-            # Send request to Mobizon API
-            response = requests.post(self.base_url, data=params, timeout=self.timeout)
-            
-            logger.info(f"Mobizon API response status: {response.status_code}")
-            logger.info(f"Mobizon API response text: {response.text}")
-            
-            if response.status_code == 200:
-                result = response.json()
+            # Send SMS with retry logic
+            result = self._send_sms_request(formatted_phone, message)
+            result['code'] = code
+            return result
                 
-                if result.get('code') == 0:  # Success
-                    logger.info(f"SMS sent successfully to {formatted_phone}")
-                    return {
-                        'success': True,
-                        'message': 'SMS sent successfully',
-                        'message_id': result.get('data', {}).get('messageId'),
-                        'phone': formatted_phone,
-                        'code': code
-                    }
-                else:
-                    error_msg = result.get('message', 'Unknown error')
-                    logger.error(f"Mobizon API error: {error_msg}")
-                    return {
-                        'success': False,
-                        'error': f"SMS API error: {error_msg}",
-                        'phone': formatted_phone
-                    }
-            else:
-                logger.error(f"HTTP error {response.status_code}: {response.text}")
-                return {
-                    'success': False,
-                    'error': f"HTTP error: {response.status_code}",
-                    'phone': formatted_phone
-                }
-                
-        except requests.exceptions.Timeout:
-            logger.error("SMS API request timeout")
-            return {
-                'success': False,
-                'error': 'SMS service timeout',
-                'phone': phone
-            }
+        except requests.exceptions.Timeout as e:
+            logger.error(f"SMS API request timeout for {phone}: {str(e)}")
+            return auth_error_handler.handle_sms_error(e, phone, "SMS send timeout")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"SMS API connection error for {phone}: {str(e)}")
+            return auth_error_handler.handle_sms_error(e, phone, "SMS connection error")
         except Exception as e:
-            logger.error(f"Error sending SMS: {str(e)}")
-            return {
-                'success': False,
-                'error': f"SMS send error: {str(e)}",
-                'phone': phone
-            }
+            logger.error(f"Error sending SMS to {phone}: {str(e)}")
+            return auth_error_handler.handle_sms_error(e, phone, "SMS send error")
     
     def validate_phone_number(self, phone: str) -> bool:
         """
@@ -156,6 +164,20 @@ class MobizonSMSService:
             )
         except:
             return False
+    
+    def send_verification_code(self, phone: str, code: str) -> bool:
+        """
+        Send verification code (wrapper for send_verification_sms)
+        
+        Args:
+            phone: Phone number in international format
+            code: Verification code to send
+            
+        Returns:
+            True if sent successfully, False otherwise
+        """
+        result = self.send_verification_sms(phone, code)
+        return result['success']
 
 
 # Global instance

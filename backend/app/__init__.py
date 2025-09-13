@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from flask_mail import Mail
+from flask_migrate import Migrate
 from celery import Celery
 import os
 
@@ -10,6 +11,7 @@ import os
 db = SQLAlchemy()
 jwt = JWTManager()
 mail = Mail()
+migrate = Migrate()
 celery = Celery()
 
 def create_app():
@@ -29,6 +31,7 @@ def create_app():
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+    app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
@@ -42,6 +45,7 @@ def create_app():
     jwt.init_app(app)
     CORS(app)
     mail.init_app(app)
+    migrate.init_app(app, db)
     
     # Initialize Celery
     celery.conf.update(app.config)
@@ -53,9 +57,15 @@ def create_app():
     from app.api.comments import comments_bp
     from app.api.media import media_bp
     from app.api.sms_auth import sms_auth_bp
+    from app.api.email_auth import email_auth_bp
+    from app.api.google_auth import google_auth_bp
+    from app.api.unified_auth import unified_auth_bp
     
+    app.register_blueprint(unified_auth_bp, url_prefix='/api/unified-auth')
+    app.register_blueprint(google_auth_bp, url_prefix='/api/auth/google')
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(sms_auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(email_auth_bp, url_prefix='/api/auth')
     app.register_blueprint(posts_bp, url_prefix='/api/posts')
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(comments_bp, url_prefix='/api')
@@ -70,6 +80,8 @@ def create_app():
         from app.models.comment import Comment
         from app.models.media import Media
         from app.models.verification import PhoneVerification
+        from app.models.code import Code
+        from app.models.email_verification import EmailVerification
         try:
             db.create_all()
         except Exception as e:

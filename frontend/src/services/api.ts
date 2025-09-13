@@ -40,7 +40,7 @@ class ApiClient {
           try {
             const refreshToken = localStorage.getItem('refresh_token');
             if (refreshToken) {
-              const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+              const response = await axios.post(`${API_BASE_URL}/unified-auth/refresh`, {}, {
                 headers: {
                   Authorization: `Bearer ${refreshToken}`,
                 },
@@ -229,22 +229,64 @@ class ApiClient {
     delete this.client.defaults.headers.common['Authorization'];
   }
 
-  // SMS Authentication methods
-  async requestSMSCode(phone_number: string) {
-    const response = await this.client.post('/auth/request-code', { phone_number });
+  // Unified Authentication methods
+  async requestCode(identifier: string) {
+    const response = await this.client.post('/unified-auth/request-code', { identifier });
     return response.data;
   }
 
-  async verifySMSCode(phone_number: string, verification_code: string) {
-    const response = await this.client.post('/auth/verify-code', { 
-      phone_number, 
-      verification_code 
+  async verifyCode(identifier: string, code: string) {
+    const response = await this.client.post('/unified-auth/verify-code', { 
+      identifier, 
+      code 
     });
     return response.data;
   }
 
+  async resendCode(identifier: string) {
+    const response = await this.client.post('/unified-auth/resend-code', { identifier });
+    return response.data;
+  }
+
+  async forceSendCode(identifier: string) {
+    const response = await this.client.post('/unified-auth/force-send-code', { identifier });
+    return response.data;
+  }
+
+  async refreshToken() {
+    const response = await this.client.post('/unified-auth/refresh');
+    return response.data;
+  }
+
+  // Legacy SMS Authentication methods (for compatibility)
+  async requestSMSCode(phone_number: string) {
+    return this.requestCode(phone_number);
+  }
+
+  async verifySMSCode(phone_number: string, verification_code: string) {
+    return this.verifyCode(phone_number, verification_code);
+  }
+
   async resendSMSCode(phone_number: string) {
-    const response = await this.client.post('/auth/resend-code', { phone_number });
+    return this.resendCode(phone_number);
+  }
+
+  // Legacy Email Authentication methods (for compatibility)
+  async requestEmailCode(email: string) {
+    return this.requestCode(email);
+  }
+
+  async verifyEmailCode(email: string, verification_code: string) {
+    return this.verifyCode(email, verification_code);
+  }
+
+  async resendEmailCode(email: string) {
+    return this.resendCode(email);
+  }
+
+  // Google OAuth methods
+  async googleLogin() {
+    const response = await this.client.get('/auth/google/login');
     return response.data;
   }
 }

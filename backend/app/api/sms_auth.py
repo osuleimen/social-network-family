@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token
 from app.models import User, PhoneVerification
 from app.services.sms_service import sms_service
+from app.services.error_handler import auth_error_handler
 from app import db
 import logging
 import re
@@ -51,109 +52,65 @@ def request_verification_code():
             existing_verification = PhoneVerification.get_latest_for_phone(formatted_phone)
             
             if existing_verification and existing_verification.is_valid:
-                # Есть действующий неиспользованный код - ждем его ввода
+                # Есть действующий код - используем его
                 response_data = {
-                    'message': 'Existing user - please enter previous SMS code',
+                    'message': 'Пользователь уже зарегистрирован. Введите код, отправленный ранее, или запросите новый код.',
                     'phone_number': formatted_phone,
                     'is_new_user': False,
                     'has_existing_code': True,
-                    'expires_in': 600
-                }
-                return jsonify(response_data), 200
-            else:
-                # Нет неистекшего кода - нужно отправить новый
-                # Generate verification code
-                verification_code = sms_service.generate_verification_code()
-                
-                # Delete old verification codes for this phone
-                old_codes = PhoneVerification.query.filter_by(phone_number=formatted_phone).all()
-                for code in old_codes:
-                    db.session.delete(code)
-                
-                # Create new verification record
-                verification = PhoneVerification(
-                    phone_number=formatted_phone,
-                    verification_code=verification_code,
-                    expires_in_minutes=10
-                )
-                
-                db.session.add(verification)
-                db.session.commit()
-                
-                # Send SMS
-                sms_result = sms_service.send_verification_sms(formatted_phone, verification_code)
-                
-                if sms_result['success']:
-                    response_data = {
-                        'message': 'New verification code sent for existing user',
-                        'phone_number': formatted_phone,
-                        'is_new_user': False,
-                        'has_existing_code': False,
-                        'expires_in': 600
-                    }
-                    
-                    # Показываем код в debug режиме
-                    if sms_service.debug_mode:
-                        response_data['code'] = verification_code
-                        
-                    return jsonify(response_data), 200
-                else:
-                    logger.error(f"SMS send failed: {sms_result.get('error')}")
-                    return jsonify({
-                        'message': 'Verification code sent successfully',
-                        'phone_number': formatted_phone,
-                        'is_new_user': False,
-                        'expires_in': 600
-                    }), 200
-            
-        else:
-            # Generate verification code
-            verification_code = sms_service.generate_verification_code()
-            
-            # Delete old verification codes for this phone
-            old_codes = PhoneVerification.query.filter_by(phone_number=formatted_phone).all()
-            for code in old_codes:
-                db.session.delete(code)
-            
-            # Create new verification record
-            verification = PhoneVerification(
-                phone_number=formatted_phone,
-                verification_code=verification_code,
-                expires_in_minutes=10
-            )
-            
-            db.session.add(verification)
-            db.session.commit()
-            
-            # Send SMS
-            sms_result = sms_service.send_verification_sms(formatted_phone, verification_code)
-            
-            if sms_result['success']:
-                response_data = {
-                    'message': 'Verification code sent successfully',
-                    'phone_number': formatted_phone,
-                    'is_new_user': existing_user is None,
-                    'expires_in': 600  # 10 minutes in seconds
+                    'expires_in': 0  # Код не истекает
                 }
                 
                 # Показываем код в debug режиме
                 if sms_service.debug_mode:
-                    response_data['code'] = verification_code
+                    response_data['code'] = existing_verification.verification_code
                     
                 return jsonify(response_data), 200
             else:
-                # If SMS failed, still return success to prevent phone number enumeration
-                logger.error(f"SMS send failed: {sms_result.get('error')}")
-                return jsonify({
-                    'message': 'Verification code sent successfully',
+                # Нет действующего кода - НЕ создаем новый, а говорим пользователю запросить новый код
+                response_data = {
+                    'message': 'Нет действующего кода. Нажмите "Запросить новый код" для получения SMS.',
                     'phone_number': formatted_phone,
-                    'is_new_user': existing_user is None,
-                    'expires_in': 600
-                }), 200
+                    'is_new_user': False,
+                    'has_existing_code': False,
+                    'expires_in': 0
+                }
+                return jsonify(response_data), 200
+            
+        else:
+            # Проверяем, есть ли уже код для этого номера
+            existing_verification = PhoneVerification.get_latest_for_phone(formatted_phone)
+            
+            if existing_verification and existing_verification.is_valid:
+                # Есть действующий код - используем его
+                response_data = {
+                    'message': 'Код уже существует и действителен',
+                    'phone_number': formatted_phone,
+                    'is_new_user': True,
+                    'has_existing_code': True,
+                    'expires_in': 0  # Код не истекает
+                }
+                
+                # Показываем код в debug режиме
+                if sms_service.debug_mode:
+                    response_data['code'] = existing_verification.verification_code
+                    
+                return jsonify(response_data), 200
+            else:
+                # Нет действующего кода - НЕ создаем новый, а говорим пользователю запросить новый код
+                response_data = {
+                    'message': 'Нет действующего кода. Нажмите "Запросить новый код" для получения SMS.',
+                    'phone_number': formatted_phone,
+                    'is_new_user': True,
+                    'has_existing_code': False,
+                    'expires_in': 0
+                }
+                return jsonify(response_data), 200
             
     except Exception as e:
-        logger.error(f"Error in request_verification_code: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(f"❌ SMS Auth Error: Error in request_verification_code: {str(e)}")
+        error_result = auth_error_handler.handle_sms_error(e, phone_number if 'phone_number' in locals() else 'unknown', "SMS code request")
+        return jsonify({'error': error_result['user_message']}), 500
 
 @sms_auth_bp.route('/verify-code', methods=['POST'])
 def verify_code():
@@ -169,22 +126,35 @@ def verify_code():
         # Format phone number
         formatted_phone = sms_service.format_phone_number(phone_number)
         
-        # Find latest verification code for this phone
-        verification = PhoneVerification.get_latest_for_phone(formatted_phone)
+        # Find ALL verification codes for this phone and check each one
+        verifications = PhoneVerification.query.filter_by(phone_number=formatted_phone).all()
         
-        if not verification:
-            return jsonify({'error': 'No verification code found. Please request a new one.'}), 400
+        if not verifications:
+            return jsonify({'error': 'Код подтверждения не найден. Запросите новый код.'}), 400
         
-        if not verification.is_valid:
-            if verification.is_expired:
-                return jsonify({'error': 'Verification code has expired. Please request a new one.'}), 400
-            elif verification.attempts >= 5:
-                return jsonify({'error': 'Too many failed attempts. Please request a new code.'}), 400
-            else:
-                return jsonify({'error': 'Verification code is no longer valid.'}), 400
+        # Check each verification code
+        valid_verification = None
+        for verification in verifications:
+            if verification.is_valid and verification.verification_code == verification_code:
+                valid_verification = verification
+                break
+        
+        if not valid_verification:
+            # Try to find any code that matches (even if not valid) to increment attempts
+            for verification in verifications:
+                if verification.verification_code == verification_code:
+                    verification.attempts += 1
+                    db.session.commit()
+                    remaining_attempts = 5 - verification.attempts
+                    return jsonify({
+                        'error': 'Неверный код подтверждения',
+                        'remaining_attempts': remaining_attempts
+                    }), 400
+            
+            return jsonify({'error': 'Неверный код подтверждения'}), 400
         
         # Verify the code
-        if verification.verify(verification_code):
+        if valid_verification.verify(verification_code):
             # Code is correct
             db.session.commit()
             
@@ -212,8 +182,7 @@ def verify_code():
             access_token = create_access_token(identity=str(user.id))
             refresh_token = create_refresh_token(identity=str(user.id))
             
-            # Clean up verification record
-            db.session.delete(verification)
+            # НЕ удаляем код верификации - он может использоваться повторно
             db.session.commit()
             
             return jsonify({
@@ -225,18 +194,19 @@ def verify_code():
             }), 200
             
         else:
-            # Wrong code
+            # Wrong code - this should not happen as we already checked above
             db.session.commit()
-            remaining_attempts = 5 - verification.attempts
+            remaining_attempts = 5 - valid_verification.attempts
             
             return jsonify({
-                'error': 'Invalid verification code',
+                'error': 'Неверный код подтверждения',
                 'remaining_attempts': remaining_attempts
             }), 400
             
     except Exception as e:
-        logger.error(f"Error in verify_code: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(f"❌ SMS Auth Error: Error in verify_code: {str(e)}")
+        error_result = auth_error_handler.handle_sms_error(e, phone_number if 'phone_number' in locals() else 'unknown', "SMS code verification")
+        return jsonify({'error': error_result['user_message']}), 500
 
 @sms_auth_bp.route('/resend-code', methods=['POST'])
 def resend_verification_code():
@@ -260,10 +230,42 @@ def resend_verification_code():
             if datetime.utcnow() - latest_verification.created_at < timedelta(seconds=60):
                 return jsonify({'error': 'Please wait before requesting a new code'}), 429
         
-        # Use the same logic as request-code
-        return request_verification_code()
+        # Force create new code for resend
+        verification_code = sms_service.generate_verification_code()
+        
+        # Create new verification record
+        verification = PhoneVerification(
+            phone_number=formatted_phone,
+            verification_code=verification_code,
+            expires_in_minutes=None  # Код не истекает
+        )
+        
+        db.session.add(verification)
+        db.session.commit()
+        
+        # Send SMS
+        sms_result = sms_service.send_verification_sms(formatted_phone, verification_code)
+        
+        if sms_result['success']:
+            response_data = {
+                'message': 'Новый код отправлен',
+                'phone_number': formatted_phone,
+                'expires_in': 0  # Код не истекает
+            }
+            
+            # Показываем код в debug режиме
+            if sms_service.debug_mode:
+                response_data['code'] = verification_code
+                
+            return jsonify(response_data), 200
+        else:
+            logger.error(f"SMS send failed: {sms_result.get('error')}")
+            return jsonify({
+                'error': sms_result.get('user_message', 'SMS недоступно, попробуйте позже')
+            }), 500
         
     except Exception as e:
-        logger.error(f"Error in resend_verification_code: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        logger.error(f"❌ SMS Auth Error: Error in resend_verification_code: {str(e)}")
+        error_result = auth_error_handler.handle_sms_error(e, phone_number if 'phone_number' in locals() else 'unknown', "SMS code resend")
+        return jsonify({'error': error_result['user_message']}), 500
 

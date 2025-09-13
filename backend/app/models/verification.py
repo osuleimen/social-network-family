@@ -15,20 +15,21 @@ class PhoneVerification(db.Model):
     is_verified = Column(Boolean, default=False, nullable=False)
     attempts = Column(Integer, default=0, nullable=False)
     
-    def __init__(self, phone_number: str, verification_code: str, expires_in_minutes: int = 10):
+    def __init__(self, phone_number: str, verification_code: str, expires_in_minutes: int = None):
         self.phone_number = phone_number
         self.verification_code = verification_code
-        self.expires_at = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
+        # Код не истекает - убираем expires_at
+        self.expires_at = datetime.utcnow() + timedelta(days=365)  # Устанавливаем дату на год вперед
     
     @property
     def is_expired(self) -> bool:
-        """Check if verification code is expired"""
-        return datetime.utcnow() > self.expires_at
+        """Check if verification code is expired - коды больше не истекают"""
+        return False  # Коды больше не истекают
     
     @property
     def is_valid(self) -> bool:
         """Check if verification code is still valid"""
-        return not self.is_expired and not self.is_verified and self.attempts < 5
+        return not self.is_expired and self.attempts < 5  # Коды всегда валидны, если не истекли и не превышены попытки
     
     def verify(self, code: str) -> bool:
         """
@@ -47,9 +48,7 @@ class PhoneVerification(db.Model):
             return False
             
         if self.verification_code == code:
-            # Увеличиваем attempts только при неверном коде
-            if not self.is_verified:
-                self.is_verified = True
+            # Код правильный - НЕ помечаем как verified, чтобы можно было использовать повторно
             return True
         else:
             # Увеличиваем attempts только при неверном коде
