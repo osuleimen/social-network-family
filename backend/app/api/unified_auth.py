@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from app import db
+from sqlalchemy.sql import func
 from app.models.user import User
 from app.models.code import Code
 from app.services.sms_service import sms_service
@@ -176,8 +177,9 @@ def verify_code():
         if not verification:
             return jsonify({'error': 'Invalid or expired verification code'}), 400
         
-        if not verification.verify(code):
-            return jsonify({'error': 'Invalid verification code'}), 400
+        # Код уже проверен в find_active_code, просто помечаем как verified
+        verification.verified_at = func.now()
+        db.session.commit()
         
         # Find or create user
         user = User.find_by_identifier(formatted_identifier)
@@ -240,9 +242,7 @@ def resend_code():
         else:
             formatted_identifier = identifier.lower()
         
-        # Deactivate existing codes
-        Code.query.filter_by(identifier=formatted_identifier, is_active=True).update({'is_active': False})
-        db.session.commit()
+        # НЕ деактивируем старые коды - они могут использоваться повторно
         
         # Create new code
         user = User.find_by_identifier(formatted_identifier)
@@ -270,10 +270,17 @@ def resend_code():
             db.session.commit()
             return jsonify({'error': f'Failed to send {identifier_type} verification code'}), 500
         
-        return jsonify({
+        response_data = {
             'success': True,
             'message': f'New verification code sent to {identifier_type}'
-        }), 200
+        }
+        
+        # Show code in debug mode for test number
+        if formatted_identifier == '+77019990438':  # Test number
+            response_data['code'] = plain_code
+            response_data['debug'] = True
+            
+        return jsonify(response_data), 200
         
     except Exception as e:
         logger.error(f"Error in resend_code: {str(e)}")

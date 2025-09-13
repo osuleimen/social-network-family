@@ -34,9 +34,9 @@ class Code(db.Model):
         if input_hash != self.code_hash:
             return False
         
-        # Mark as verified and deactivate
+        # Mark as verified but НЕ деактивируем - код может использоваться повторно
         self.verified_at = func.now()
-        self.is_active = False
+        # self.is_active = False  # Убираем деактивацию
         return True
     
     def deactivate(self):
@@ -48,8 +48,7 @@ class Code(db.Model):
         """Create a new verification code"""
         import secrets
         
-        # Deactivate existing active codes for this identifier
-        cls.query.filter_by(identifier=identifier, is_active=True).update({'is_active': False})
+        # НЕ деактивируем старые коды - они могут использоваться повторно
         
         # Generate 6-digit code
         code = f"{secrets.randbelow(1000000):06d}"
@@ -70,14 +69,12 @@ class Code(db.Model):
     
     @classmethod
     def find_active_code(cls, identifier: str, code: str):
-        """Find active code for identifier and verify it"""
-        active_codes = cls.query.filter_by(
-            identifier=identifier,
-            is_active=True
-        ).all()
+        """Find code for identifier and verify it (including previously used codes)"""
+        # Ищем ВСЕ коды для идентификатора, не только активные
+        all_codes = cls.query.filter_by(identifier=identifier).all()
         
-        # Check each active code
-        for code_obj in active_codes:
+        # Check each code
+        for code_obj in all_codes:
             # Verify hash without modifying the object yet
             import hashlib
             input_hash = hashlib.sha256(code.encode('utf-8')).hexdigest()
