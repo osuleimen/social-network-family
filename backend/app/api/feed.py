@@ -8,6 +8,7 @@ from app.models.friend import Friend
 from app.models.like import Like
 from sqlalchemy import or_, and_, func, desc
 from datetime import datetime, timedelta
+import uuid
 
 feed_bp = Blueprint('feed', __name__)
 
@@ -240,7 +241,7 @@ def get_hashtag_feed(hashtag):
         'hashtag': hashtag
     }), 200
 
-@feed_bp.route('/user/<int:user_id>', methods=['GET'])
+@feed_bp.route('/user/<user_id>', methods=['GET'])
 @jwt_required()
 def get_user_feed(user_id):
     """Get feed for a specific user"""
@@ -248,16 +249,22 @@ def get_user_feed(user_id):
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     
+    # Convert string UUID to UUID object
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        return jsonify({'error': 'Invalid user ID format'}), 400
+    
     # Check if user exists
-    user = User.query.get(user_id)
+    user = User.query.get(user_uuid)
     if not user:
         return jsonify({'error': 'User not found'}), 404
     
     # Get posts from the user
-    query = Post.query.filter_by(author_id=user_id)
+    query = Post.query.filter_by(author_id=user_uuid)
     
     # Apply privacy filters
-    if current_user_id != user_id:
+    if current_user_id != str(user_uuid):
         # For other users, only show public posts or posts user can view
         query = query.filter(
             Post.privacy == PostPrivacy.PUBLIC,

@@ -89,7 +89,7 @@ const ProfilePage = () => {
     );
   }
 
-  const user = userData?.user;
+  const user = userData; // API returns user data directly
   const posts = postsData?.posts || [];
   const isOwnProfile = !userId || currentUser?.id === user?.id;
 
@@ -101,7 +101,7 @@ const ProfilePage = () => {
           {/* Avatar */}
           <div className="h-24 w-24 rounded-full bg-primary-600 flex items-center justify-center">
             <span className="text-2xl font-medium text-white">
-              {user?.first_name[0]}{user?.last_name[0]}
+              {user?.display_name?.[0] || user?.username?.[0] || 'U'}
             </span>
           </div>
 
@@ -110,7 +110,7 @@ const ProfilePage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {user?.first_name} {user?.last_name}
+                  {user?.display_name || user?.username || 'User'}
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400">@{user?.username}</p>
               </div>
@@ -137,19 +137,19 @@ const ProfilePage = () => {
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {user?.followers_count} followers
+                  {user?.followers_count || 0} followers
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {user?.following_count} following
+                  {user?.following_count || 0} following
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {user?.posts_count} posts
+                  {postsData?.total || posts.length} posts
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -190,7 +190,7 @@ const ProfilePage = () => {
       {/* Posts */}
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {isOwnProfile ? 'Your Posts' : `${user?.first_name}'s Posts`}
+          {isOwnProfile ? 'Your Posts' : `${user?.display_name || user?.username}'s Posts`}
         </h2>
 
         {postsLoading ? (
@@ -204,7 +204,7 @@ const ProfilePage = () => {
         ) : posts.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              {isOwnProfile ? 'You haven\'t posted anything yet.' : `${user?.first_name} hasn't posted anything yet.`}
+              {isOwnProfile ? 'You haven\'t posted anything yet.' : `${user?.display_name || user?.username} hasn't posted anything yet.`}
             </p>
           </div>
         ) : (
