@@ -89,6 +89,14 @@ const ProfilePage = () => {
     );
   }
 
+  if (!userData) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 dark:text-gray-400">Loading user profile...</p>
+      </div>
+    );
+  }
+
   const user = userData; // API returns user data directly
   const posts = postsData?.posts || [];
   const isOwnProfile = !userId || currentUser?.id === user?.id;
@@ -101,7 +109,7 @@ const ProfilePage = () => {
           {/* Avatar */}
           <div className="h-24 w-24 rounded-full bg-primary-600 flex items-center justify-center">
             <span className="text-2xl font-medium text-white">
-              {user?.display_name?.[0] || user?.username?.[0] || 'U'}
+              {(user?.display_name && user.display_name[0]) || (user?.username && user.username[0]) || 'U'}
             </span>
           </div>
 
