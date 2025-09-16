@@ -74,21 +74,19 @@ def create_post():
         caption=data['caption'].strip(),
         author_id=current_user_id,
         privacy=privacy,
-        location_name=data.get('location_name'),
-        latitude=data.get('latitude'),
-        longitude=data.get('longitude'),
-        ai_generated_description=data.get('ai_generated_description'),
-        ai_generated_hashtags=data.get('ai_generated_hashtags', []),
         media=data.get('media', [])
     )
     
     # Extract hashtags and mentions from caption
-    post.update_hashtags_and_mentions()
+    post.hashtags = post.extract_hashtags()
+    post.mentions = post.extract_mentions()
     
     db.session.add(post)
     db.session.commit()
     
-    return jsonify(post.to_dict(requesting_user=current_user_id)), 201
+    # Get current user object for requesting_user
+    current_user = User.query.get(current_user_id)
+    return jsonify(post.to_dict(requesting_user=current_user)), 201
 
 @posts_bp.route('/<post_id>', methods=['GET'])
 @jwt_required()

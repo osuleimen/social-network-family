@@ -29,7 +29,14 @@ const ProfilePage = () => {
     error: postsError,
   } = useQuery({
     queryKey: ['userPosts', userId || 'me'],
-    queryFn: () => apiClient.getFeed({ page: 1, per_page: 20 }), // This should be user-specific posts
+    queryFn: () => {
+      if (userId) {
+        return apiClient.getUserPosts(parseInt(userId), { page: 1, per_page: 20 });
+      } else {
+        // For current user, get their own posts
+        return apiClient.getUserPosts(userData?.user?.id, { page: 1, per_page: 20 });
+      }
+    },
     enabled: !!userData,
   });
 

@@ -52,6 +52,9 @@ class User(db.Model):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Relationships
+    posts = relationship("Post", back_populates="author")
+
     def to_dict(self, include_pii=False, requesting_user=None):
         """Convert user to dictionary with PII protection"""
         data = {

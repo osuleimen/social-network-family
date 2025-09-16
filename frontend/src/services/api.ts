@@ -68,7 +68,7 @@ class ApiClient {
 
   // User endpoints
   async getCurrentUser() {
-    const response = await this.client.get('/auth/me');
+    const response = await this.client.get('/users/profile');
     return response.data;
   }
 
@@ -95,33 +95,36 @@ class ApiClient {
     gramps_person_id: string;
     gramps_tree_id: string;
   }>) {
-    const response = await this.client.put('/users/me', userData);
+    const response = await this.client.put('/users/profile', userData);
     return response.data;
   }
 
   async followUser(userId: number) {
-    const response = await this.client.post(`/users/${userId}/follow`);
+    const response = await this.client.post(`/follow/${userId}`);
     return response.data;
   }
 
   async unfollowUser(userId: number) {
-    const response = await this.client.post(`/users/${userId}/unfollow`);
+    const response = await this.client.post(`/unfollow/${userId}`);
     return response.data;
   }
 
   async getFollowers(userId: number, params?: { page?: number; per_page?: number }) {
-    const response = await this.client.get(`/users/${userId}/followers`, { params });
+    const response = await this.client.get(`/followers/${userId}`, { params });
     return response.data;
   }
 
   async getFollowing(userId: number, params?: { page?: number; per_page?: number }) {
-    const response = await this.client.get(`/users/${userId}/following`, { params });
+    const response = await this.client.get(`/following/${userId}`, { params });
     return response.data;
   }
 
   // Post endpoints
   async createPost(postData: { content: string; is_public?: boolean }) {
-    const response = await this.client.post('/posts', postData);
+    const response = await this.client.post('/posts', {
+      caption: postData.content,
+      privacy: postData.is_public ? 'public' : 'private'
+    });
     return response.data;
   }
 
@@ -209,6 +212,11 @@ class ApiClient {
 
   async getExploreFeed(params?: { page?: number; per_page?: number }) {
     const response = await this.client.get('/feed/explore', { params });
+    return response.data;
+  }
+
+  async getUserPosts(userId: number, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get(`/feed/user/${userId}`, { params });
     return response.data;
   }
 

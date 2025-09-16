@@ -30,6 +30,9 @@ class Post(db.Model):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Relationships
+    author = relationship("User", back_populates="posts")
+
     def to_dict(self, requesting_user=None):
         """Convert post to dictionary"""
         return {
