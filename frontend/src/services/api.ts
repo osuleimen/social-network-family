@@ -229,6 +229,23 @@ class ApiClient {
     delete this.client.defaults.headers.common['Authorization'];
   }
 
+  // Generic HTTP methods for compatibility
+  async get(url: string, config?: any) {
+    return this.client.get(url, config);
+  }
+
+  async post(url: string, data?: any, config?: any) {
+    return this.client.post(url, data, config);
+  }
+
+  async put(url: string, data?: any, config?: any) {
+    return this.client.put(url, data, config);
+  }
+
+  async delete(url: string, config?: any) {
+    return this.client.delete(url, config);
+  }
+
   // Unified Authentication methods
   async requestCode(identifier: string) {
     const response = await this.client.post('/unified-auth/request-code', { identifier });

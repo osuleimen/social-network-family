@@ -1,31 +1,66 @@
+from sqlalchemy import Column, String, DateTime, ForeignKey, UUID, Boolean, JSON
+from sqlalchemy.sql import func
 from app import db
-from datetime import datetime
+import uuid
 
 class Notification(db.Model):
-    """Notification model for social network"""
-    __tablename__ = 'notifications'
+    __tablename__ = 'social_notifications'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    type = db.Column(db.String(50), nullable=False)  # like, comment, follow, etc.
-    title = db.Column(db.String(255), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    data = db.Column(db.JSON)  # Additional data like post_id, comment_id, etc.
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('social_users.id'), nullable=False)
+    actor_id = Column(UUID(as_uuid=True), ForeignKey('social_users.id'), nullable=True)
+    target_id = Column(UUID(as_uuid=True), nullable=True)
+    type = Column(String(50), nullable=False)
+    payload = Column(JSON, nullable=True)
+    read = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     def to_dict(self):
         """Convert notification to dictionary"""
         return {
-            'id': self.id,
-            'user_id': self.user_id,
+            'id': str(self.id),
+            'user_id': str(self.user_id),
+            'actor_id': str(self.actor_id) if self.actor_id else None,
+            'target_id': str(self.target_id) if self.target_id else None,
             'type': self.type,
-            'title': self.title,
-            'message': self.message,
-            'data': self.data,
-            'is_read': self.is_read,
+            'payload': self.payload or {},
+            'read': self.read,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
     
+    @classmethod
+    def create_notification(cls, user_id, notification_type, actor_id=None, target_id=None, payload=None):
+        """Create a new notification"""
+        notification = cls(
+            user_id=user_id,
+            type=notification_type,
+            actor_id=actor_id,
+            target_id=target_id,
+            payload=payload or {}
+        )
+        db.session.add(notification)
+        return notification
+    
+    @classmethod
+    def get_user_notifications(cls, user_id, limit=20, offset=0):
+        """Get notifications for a user"""
+        return cls.query.filter_by(user_id=user_id).order_by(
+            cls.created_at.desc()
+        ).offset(offset).limit(limit).all()
+    
+    @classmethod
+    def get_unread_count(cls, user_id):
+        """Get unread notification count for user"""
+        return cls.query.filter_by(user_id=user_id, read=False).count()
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        self.read = True
+    
+    @classmethod
+    def mark_all_as_read(cls, user_id):
+        """Mark all notifications as read for user"""
+        cls.query.filter_by(user_id=user_id, read=False).update({'read': True})
+    
     def __repr__(self):
-        return f'<Notification {self.type} for user {self.user_id}>'
+        return f'<Notification {self.type} for {self.user_id}>'

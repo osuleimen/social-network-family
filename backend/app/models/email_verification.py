@@ -1,14 +1,13 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, String, Boolean, DateTime, UUID, Integer
 from sqlalchemy.sql import func
 from app import db
-import secrets
-import string
+import uuid
 from datetime import datetime, timedelta
 
 class EmailVerification(db.Model):
     __tablename__ = 'email_verifications'
     
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(120), nullable=False, index=True)
     verification_code = Column(String(10), nullable=False)
     attempts = Column(Integer, default=0)
@@ -18,19 +17,9 @@ class EmailVerification(db.Model):
     
     @property
     def is_expired(self):
-        """Check if verification code is expired - коды больше не истекают"""
-        return False  # Коды больше не истекают
+        return False
     
     def verify(self, code: str) -> bool:
-        """
-        Verify the provided code
-        
-        Args:
-            code: Code to verify
-            
-        Returns:
-            True if code is correct, False otherwise
-        """
         if not self.is_valid or self.is_expired:
             return False
             
@@ -47,18 +36,6 @@ class EmailVerification(db.Model):
     
     @classmethod
     def create_verification(cls, email: str, code: str, expires_minutes: int = None):
-        """
-        Create new email verification record
-        
-        Args:
-            email: Email address
-            code: Verification code
-            expires_minutes: Minutes until expiration (не используется - коды не истекают)
-            
-        Returns:
-            EmailVerification instance
-        """
-        # Код не истекает - устанавливаем дату на год вперед
         expires_at = datetime.utcnow() + timedelta(days=365)
         
         verification = cls(
@@ -71,15 +48,6 @@ class EmailVerification(db.Model):
     
     @classmethod
     def get_latest_for_email(cls, email: str):
-        """
-        Get latest valid verification for email
-        
-        Args:
-            email: Email address
-            
-        Returns:
-            Latest EmailVerification or None
-        """
         from datetime import timezone
         now = datetime.now(timezone.utc)
         return cls.query.filter_by(
@@ -91,12 +59,6 @@ class EmailVerification(db.Model):
     
     @classmethod
     def invalidate_old_verifications(cls, email: str):
-        """
-        Invalidate old verifications for email
-        
-        Args:
-            email: Email address
-        """
         cls.query.filter_by(email=email).update({'is_valid': False})
     
     def __repr__(self):

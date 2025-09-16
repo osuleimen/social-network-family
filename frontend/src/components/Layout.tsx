@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { Home, Compass, Search, User, Moon, Sun, LogOut } from 'lucide-react';
+import { Home, Compass, Search, User, Moon, Sun, LogOut, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
+// import { NotificationsPanel } from './NotificationsPanel';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, setUser } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const location = useLocation();
+  // const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -69,6 +71,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* User menu */}
             <div className="flex items-center space-x-4">
+                    {/* Notifications */}
+                    <button
+                      className="relative p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      <Bell className="h-5 w-5" />
+                      {/* Notification badge would go here */}
+                    </button>
+
               {/* Theme toggle */}
               <button
                 onClick={toggleDarkMode}
@@ -136,6 +146,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+
+      {/* Notifications Panel */}
+      {/* <NotificationsPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      /> */}
     </div>
   );
 };

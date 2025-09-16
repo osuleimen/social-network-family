@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models import User, Post, Comment
+from app.models.notification import Notification
 from app import db
 
 comments_bp = Blueprint('comments', __name__)
@@ -36,6 +37,19 @@ def create_comment(post_id):
     )
     
     db.session.add(comment)
+    
+    # Create notification for post author (if not commenting on own post)
+    if post.author_id != current_user_id:
+        current_user = User.query.get(current_user_id)
+        notification = Notification(
+            user_id=post.author_id,
+            type='comment',
+            title='New Comment',
+            message=f'{current_user.first_name or current_user.username or "Someone"} commented on your post',
+            data={'commenter_id': current_user_id, 'commenter_name': current_user.first_name or current_user.username, 'post_id': post_id, 'comment_id': comment.id}
+        )
+        db.session.add(notification)
+    
     db.session.commit()
     
     return jsonify(comment.to_dict()), 201

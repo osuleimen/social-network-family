@@ -42,12 +42,12 @@ POSTGRES_PASSWORD={postgres_password}
 REDIS_URL=redis://localhost:6379/0
 
 # Email Configuration (Optional)
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USE_TLS=true
-MAIL_USERNAME=your-email@gmail.com
-MAIL_PASSWORD=your-app-password
-MAIL_DEFAULT_SENDER=your-email@gmail.com
+MAIL_SERVER=mail.ozimiz.org
+MAIL_PORT=465
+MAIL_USE_SSL=true
+MAIL_USERNAME=noreply@ozimiz.org
+MAIL_PASSWORD=1tJyh64_4
+MAIL_DEFAULT_SENDER=noreply@ozimiz.org
 
 # Frontend Configuration
 VITE_API_URL=https://my.ozimiz.org/api

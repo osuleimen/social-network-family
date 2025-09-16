@@ -6,6 +6,7 @@ from flask_mail import Mail
 from flask_migrate import Migrate
 from celery import Celery
 import os
+import logging
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -18,23 +19,29 @@ def create_app():
     """Application factory pattern"""
     app = Flask(__name__)
     
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+    
     # Configuration
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///social_network.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
     app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "your-super-secret-jwt-key-change-this-in-production")
-    print("JWT_SECRET_KEY:", app.config["JWT_SECRET_KEY"])
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600))
     app.config['JWT_REFRESH_TOKEN_EXPIRES'] = int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES', 2592000))
     
     # Mail configuration
-    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
-    app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() == 'true'
+    app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'mail.ozimiz.org')
+    app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 465))
+    app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'false').lower() == 'true'
+    app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'true').lower() == 'true'
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+    
+    # Disable mail connection check on startup
+    app.config['MAIL_SUPPRESS_SEND'] = True
     
     # Celery configuration
     app.config['CELERY_BROKER_URL'] = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -60,6 +67,14 @@ def create_app():
     from app.api.email_auth import email_auth_bp
     from app.api.google_auth import google_auth_bp
     from app.api.unified_auth import unified_auth_bp
+    from app.api.follows import follows_bp
+    from app.api.friends import friends_bp
+    from app.api.notifications import notifications_bp
+    from app.api.admin import admin_bp
+    from app.api.admin_auth import admin_auth_bp
+    # from app.api.search import search_bp
+    from app.api.feed import feed_bp
+    from app.api.ai import ai_bp
     
     app.register_blueprint(unified_auth_bp, url_prefix='/api/unified-auth')
     app.register_blueprint(google_auth_bp, url_prefix='/api/auth/google')
@@ -70,6 +85,14 @@ def create_app():
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(comments_bp, url_prefix='/api')
     app.register_blueprint(media_bp, url_prefix='/api')
+    app.register_blueprint(follows_bp, url_prefix='/api')
+    app.register_blueprint(friends_bp, url_prefix='/api')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(admin_auth_bp)  # No prefix for /adm route
+    # app.register_blueprint(search_bp, url_prefix='/api/search')
+    app.register_blueprint(feed_bp, url_prefix='/api/feed')
+    app.register_blueprint(ai_bp, url_prefix='/api/ai')
     
     # Create database tables
     with app.app_context():
@@ -82,6 +105,9 @@ def create_app():
         from app.models.verification import PhoneVerification
         from app.models.code import Code
         from app.models.email_verification import EmailVerification
+        from app.models.follow import Follow
+        from app.models.friend import Friend
+        from app.models.notification import Notification
         try:
             db.create_all()
         except Exception as e:

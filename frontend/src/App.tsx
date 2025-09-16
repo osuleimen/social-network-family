@@ -120,11 +120,6 @@ function App() {
                 {/* Fallback route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-              
-              {/* Version info */}
-            <div className="fixed bottom-2 right-2 text-xs text-red-600 bg-yellow-200 px-3 py-2 rounded shadow-lg border-2 border-red-500 font-bold">
-              v1.2.3 - SMS ИСПРАВЛЕН - {new Date().toLocaleString()}
-            </div>
             </div>
           </Router>
         </AuthProvider>

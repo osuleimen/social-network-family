@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, Eye, EyeOff, Image, X } from 'lucide-react';
+import { Send, Eye, EyeOff, Image, X, Sparkles } from 'lucide-react';
 import MediaUpload from './MediaUpload';
+// import { AIContentGenerator } from './AIContentGenerator';
 
 const postSchema = z.object({
   content: z.string().min(1, 'Post content is required').max(1000, 'Post is too long'),
@@ -20,6 +21,7 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
   const [isPublic, setIsPublic] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [showMediaUpload, setShowMediaUpload] = useState(false);
+  // const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [createdPostId, setCreatedPostId] = useState<number | null>(null);
 
@@ -46,6 +48,19 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
   const handleFilesSelected = (files: File[]) => {
     setSelectedFiles(files);
   };
+
+  // const handleAIContentGenerated = (content: string, hashtags: string[]) => {
+  //   const currentContent = watch('content') || '';
+  //   const newContent = currentContent + (currentContent ? '\n\n' : '') + content;
+  //   if (hashtags.length > 0) {
+  //     const hashtagString = hashtags.map(tag => `#${tag}`).join(' ');
+  //     const finalContent = newContent + '\n\n' + hashtagString;
+  //     reset({ content: finalContent });
+  //   } else {
+  //     reset({ content: newContent });
+  //   }
+  //   setShowAIGenerator(false);
+  // };
 
   return (
     <div className="card p-6">
@@ -122,6 +137,15 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
               </span>
             </button>
 
+                        {/* AI Generator toggle */}
+                        <button
+                          type="button"
+                          className="flex items-center space-x-2 text-sm transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          <span>AI Generator</span>
+                        </button>
+
             {/* Preview toggle */}
             <button
               type="button"
@@ -151,6 +175,16 @@ const CreatePostForm = ({ onSubmit, isLoading }: CreatePostFormProps) => {
             </div>
           </div>
         )}
+
+        {/* AI Content Generator */}
+        {/* {showAIGenerator && (
+          <div className="mt-4">
+            <AIContentGenerator
+              onContentGenerated={handleAIContentGenerated}
+              language="ru"
+            />
+          </div>
+        )} */}
       </form>
     </div>
   );

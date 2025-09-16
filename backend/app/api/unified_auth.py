@@ -188,10 +188,7 @@ def verify_code():
             # Create new user
             user = User.create_from_identifier(
                 identifier=formatted_identifier,
-                user_type=identifier_type,
-                first_name='Пользователь',  # Default name
-                last_name='',
-                is_verified=True
+                user_type=identifier_type
             )
             db.session.add(user)
             db.session.commit()
@@ -355,6 +352,53 @@ def force_send_code():
         db.session.rollback()
         return jsonify({'error': 'Internal server error'}), 500
 
+@unified_auth_bp.route('/login', methods=['POST'])
+def login():
+    """Login with email/phone and password"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        identifier = data.get('identifier', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not identifier or not password:
+            return jsonify({'error': 'Identifier and password are required'}), 400
+        
+        # Find user by identifier
+        user = None
+        if '@' in identifier:
+            user = User.query.filter_by(email=identifier).first()
+        else:
+            user = User.query.filter_by(phone_number=identifier).first()
+        
+        if not user:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Check password
+        if not user.check_password(password):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Check if user is active
+        if user.status.value != 'active':
+            return jsonify({'error': 'Account is not active'}), 401
+        
+        # Generate tokens
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+        
+        return jsonify({
+            'success': True,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in login: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 @unified_auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
@@ -378,4 +422,57 @@ def refresh():
         
     except Exception as e:
         logger.error(f"Error in refresh: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@unified_auth_bp.route('/google', methods=['POST'])
+def google_auth():
+    """Authenticate user with Google OAuth"""
+    try:
+        data = request.get_json()
+        google_token = data.get('google_token')
+        
+        if not google_token:
+            return jsonify({'error': 'Google token is required'}), 400
+        
+        # Verify Google token and get user info
+        # For now, we'll simulate this with a mock response
+        # In production, you would verify the token with Google's API
+        google_data = {
+            'id': 'google_123456789',
+            'email': 'test@example.com',
+            'name': 'Test User',
+            'given_name': 'Test',
+            'family_name': 'User',
+            'picture': 'https://example.com/avatar.jpg'
+        }
+        
+        # Find existing user by Google ID
+        user = User.find_by_google_id(google_data['id'])
+        
+        if not user:
+            # Create new user from Google data
+            user = User.create_from_google(google_data)
+            db.session.add(user)
+            db.session.commit()
+            
+            logger.info(f"Created new user from Google: {google_data['email']}")
+            is_new_user = True
+        else:
+            logger.info(f"User {user.id} authenticated via Google")
+            is_new_user = False
+        
+        # Generate JWT tokens
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
+        
+        return jsonify({
+            'success': True,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': user.to_dict(),
+            'is_new_user': is_new_user
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in google_auth: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500

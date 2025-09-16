@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, DateTime, Boolean, UUID, Integer
 from app import db
+import uuid
 
 class PhoneVerification(db.Model):
-    """Model for storing phone verification codes"""
     __tablename__ = 'phone_verifications'
     
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     phone_number = Column(String(20), nullable=False, index=True)
     verification_code = Column(String(10), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -18,29 +17,17 @@ class PhoneVerification(db.Model):
     def __init__(self, phone_number: str, verification_code: str, expires_in_minutes: int = None):
         self.phone_number = phone_number
         self.verification_code = verification_code
-        # Код не истекает - убираем expires_at
-        self.expires_at = datetime.utcnow() + timedelta(days=365)  # Устанавливаем дату на год вперед
+        self.expires_at = datetime.utcnow() + timedelta(days=365)
     
     @property
     def is_expired(self) -> bool:
-        """Check if verification code is expired - коды больше не истекают"""
-        return False  # Коды больше не истекают
+        return False
     
     @property
     def is_valid(self) -> bool:
-        """Check if verification code is still valid"""
-        return not self.is_expired and self.attempts < 5  # Коды всегда валидны, если не истекли и не превышены попытки
+        return not self.is_expired and self.attempts < 5
     
     def verify(self, code: str) -> bool:
-        """
-        Verify the code
-        
-        Args:
-            code: Code to verify
-            
-        Returns:
-            True if verification successful, False otherwise
-        """
         if self.is_expired:
             return False
             
@@ -48,17 +35,14 @@ class PhoneVerification(db.Model):
             return False
             
         if self.verification_code == code:
-            # Код правильный - НЕ помечаем как verified, чтобы можно было использовать повторно
             return True
         else:
-            # Увеличиваем attempts только при неверном коде
             self.attempts += 1
             return False
     
     def to_dict(self) -> dict:
-        """Convert to dictionary"""
         return {
-            'id': self.id,
+            'id': str(self.id),
             'phone_number': self.phone_number,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'expires_at': self.expires_at.isoformat() if self.expires_at else None,
@@ -70,7 +54,6 @@ class PhoneVerification(db.Model):
     
     @classmethod
     def cleanup_expired(cls):
-        """Remove expired verification codes"""
         expired_codes = cls.query.filter(cls.expires_at < datetime.utcnow()).all()
         for code in expired_codes:
             db.session.delete(code)
@@ -79,11 +62,9 @@ class PhoneVerification(db.Model):
     
     @classmethod
     def get_latest_for_phone(cls, phone_number: str):
-        """Get latest verification code for phone number"""
         return cls.query.filter_by(
             phone_number=phone_number
         ).order_by(cls.created_at.desc()).first()
     
     def __repr__(self):
         return f'<PhoneVerification {self.phone_number} - {self.verification_code}>'
-

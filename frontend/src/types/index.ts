@@ -1,7 +1,7 @@
 export interface User {
   id: number;
-  username: string;
-  email: string;
+  username?: string;
+  email?: string;
   first_name: string;
   last_name: string;
   bio?: string;
@@ -11,10 +11,18 @@ export interface User {
   created_at: string;
   gramps_person_id?: string;
   gramps_tree_id?: string;
-  followers_count: number;
-  following_count: number;
-  posts_count: number;
+  followers_count?: number;
+  following_count?: number;
+  posts_count?: number;
   is_following?: boolean;
+  auth_method?: string;
+  phone_number?: string;
+  role?: string;
+  is_banned?: boolean;
+  banned_until?: string;
+  ban_reason?: string;
+  birth_date?: string;
+  updated_at?: string;
 }
 
 export interface Media {
@@ -40,7 +48,18 @@ export interface Post {
   author: User;
   likes_count: number;
   comments_count: number;
+  user_liked: boolean;
   media: Media[];
+  visibility?: string;
+  hashtags?: string[];
+  mentions?: string[];
+  location_name?: string;
+  latitude?: number;
+  longitude?: number;
+  ai_generated_description?: string;
+  ai_generated_hashtags?: string[];
+  is_edited?: boolean;
+  edit_count?: number;
 }
 
 export interface Comment {

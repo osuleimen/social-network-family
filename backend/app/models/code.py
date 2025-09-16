@@ -1,81 +1,61 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, UUID
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 from app import db
 import hashlib
+import uuid
 
 class Code(db.Model):
     __tablename__ = 'social_codes'
     
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('social_users.id'), nullable=True)  # Can be null for unregistered users
-    identifier = Column(String(255), nullable=False)  # phone/email for which code was generated
-    type = Column(String(20), nullable=False)  # 'phone' or 'email'
-    code_hash = Column(String(255), nullable=False)  # bcrypt hash of 6-digit code
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('social_users.id'), nullable=True)
+    identifier = Column(String(255), nullable=False)
+    type = Column(String(20), nullable=False)
+    code_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
-    expires_at = Column(DateTime(timezone=True), nullable=True)  # Nullable - codes don't expire per TZ
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     verified_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Relationship
-    user = relationship('User', backref='codes')
-    
     def is_expired(self):
-        """Check if code is expired - per TZ codes don't expire"""
-        return False  # Codes don't expire per technical requirements
+        return False
     
     def verify(self, input_code: str):
-        """Verify the code using hash comparison"""
         if not self.is_active:
             return False
         
-        # Verify using hash comparison
         input_hash = hashlib.sha256(input_code.encode('utf-8')).hexdigest()
         if input_hash != self.code_hash:
             return False
         
-        # Mark as verified but НЕ деактивируем - код может использоваться повторно
         self.verified_at = func.now()
-        # self.is_active = False  # Убираем деактивацию
         return True
     
     def deactivate(self):
-        """Deactivate the code"""
         self.is_active = False
     
     @classmethod
     def create_code(cls, identifier: str, code_type: str, user_id=None):
-        """Create a new verification code"""
         import secrets
         
-        # НЕ деактивируем старые коды - они могут использоваться повторно
-        
-        # Generate 6-digit code
         code = f"{secrets.randbelow(1000000):06d}"
-        
-        # Hash the code with SHA256
         code_hash = hashlib.sha256(code.encode('utf-8')).hexdigest()
         
-        # Create new code (no expiration per TZ)
         new_code = cls(
             user_id=user_id,
             identifier=identifier,
             type=code_type,
             code_hash=code_hash,
-            expires_at=None  # No expiration per technical requirements
+            expires_at=None
         )
         
-        return new_code, code  # Return both the model and the plain code for sending
+        return new_code, code
     
     @classmethod
     def find_active_code(cls, identifier: str, code: str):
-        """Find code for identifier and verify it (including previously used codes)"""
-        # Ищем ВСЕ коды для идентификатора, не только активные
         all_codes = cls.query.filter_by(identifier=identifier).all()
         
-        # Check each code
         for code_obj in all_codes:
-            # Verify hash without modifying the object yet
             import hashlib
             input_hash = hashlib.sha256(code.encode('utf-8')).hexdigest()
             if input_hash == code_obj.code_hash:
@@ -85,16 +65,14 @@ class Code(db.Model):
     
     @classmethod
     def find_active_code_for_identifier(cls, identifier: str):
-        """Find any active code for identifier"""
         return cls.query.filter_by(
             identifier=identifier,
             is_active=True
         ).first()
     
     def to_dict(self):
-        """Convert code to dictionary"""
         return {
-            'id': self.id,
+            'id': str(self.id),
             'identifier': self.identifier,
             'type': self.type,
             'is_active': self.is_active,

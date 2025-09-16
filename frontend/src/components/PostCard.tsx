@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { Post } from '../types';
 import apiClient from '../services/api';
-import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Image, X } from 'lucide-react';
+import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Eye, EyeOff, Image, X, Share2, Bookmark, Flag } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import CommentsSection from './CommentsSection';
 import MediaGallery from './MediaGallery';
@@ -21,6 +21,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
   const [showMediaUpload, setShowMediaUpload] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const likeMutation = useMutation({
     mutationFn: () => apiClient.likePost(post.id),
@@ -63,7 +64,7 @@ const PostCard = ({ post }: PostCardProps) => {
   });
 
   const handleLike = () => {
-    if (post.likes_count > 0) {
+    if (post.user_liked) {
       unlikeMutation.mutate();
     } else {
       likeMutation.mutate();
@@ -89,8 +90,27 @@ const PostCard = ({ post }: PostCardProps) => {
     deleteMediaMutation.mutate(mediaId);
   };
 
+  const handleSave = () => {
+    setIsSaved(!isSaved);
+    // TODO: Implement save/unsave API call
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Post by ${post.author.first_name} ${post.author.last_name}`,
+        text: post.content,
+        url: window.location.href
+      });
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(window.location.href);
+      // TODO: Show toast notification
+    }
+  };
+
   const isOwnPost = user?.id === post.author.id;
-  const isLiked = post.likes_count > 0; // This should be determined by checking if current user liked the post
+  const isLiked = post.user_liked || false;
 
   return (
     <div className="card p-6">
@@ -292,6 +312,27 @@ const PostCard = ({ post }: PostCardProps) => {
           >
             <MessageCircle className="h-5 w-5" />
             <span>{post.comments_count}</span>
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            <Share2 className="h-5 w-5" />
+            <span>Share</span>
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handleSave}
+            className={`text-sm transition-colors ${
+              isSaved
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Bookmark className={`h-5 w-5 ${isSaved ? 'fill-current' : ''}`} />
           </button>
         </div>
       </div>
