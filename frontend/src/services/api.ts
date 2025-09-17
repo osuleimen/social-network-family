@@ -121,7 +121,7 @@ class ApiClient {
 
   // Post endpoints
   async createPost(postData: { content: string; is_public?: boolean }) {
-    const response = await this.client.post('/posts', {
+    const response = await this.client.post('/posts/', {
       caption: postData.content,
       privacy: postData.is_public ? 'public' : 'private'
     });
@@ -206,7 +206,7 @@ class ApiClient {
 
   // Feed endpoints
   async getFeed(params?: { page?: number; per_page?: number }) {
-    const response = await this.client.get('/feed', { params });
+    const response = await this.client.get('/feed/home', { params });
     return response.data;
   }
 
@@ -221,7 +221,14 @@ class ApiClient {
   }
 
   async searchPosts(query: string, params?: { page?: number; per_page?: number }) {
-    const response = await this.client.get('/feed/search', { 
+    const response = await this.client.get('/search/posts', { 
+      params: { q: query, ...params } 
+    });
+    return response.data;
+  }
+
+  async searchUsers(query: string, params?: { page?: number; per_page?: number }) {
+    const response = await this.client.get('/search/users', { 
       params: { q: query, ...params } 
     });
     return response.data;

@@ -76,10 +76,8 @@ def google_callback():
                 user.google_id = user_data['google_id']
                 user.google_picture = user_data['picture']
                 user.auth_method = 'google'
-                if not user.first_name:
-                    user.first_name = user_data['first_name']
-                if not user.last_name:
-                    user.last_name = user_data['last_name']
+                if not user.display_name:
+                    user.display_name = user_data['first_name'] + ' ' + user_data['last_name']
                 if not user.avatar_url:
                     user.avatar_url = user_data['picture']
                 db.session.commit()

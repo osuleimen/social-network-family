@@ -72,7 +72,7 @@ def create_app():
     from app.api.notifications import notifications_bp
     from app.api.admin import admin_bp
     from app.api.admin_auth import admin_auth_bp
-    # from app.api.search import search_bp
+    from app.api.search import search_bp
     from app.api.feed import feed_bp
     from app.api.ai import ai_bp
     
@@ -90,7 +90,7 @@ def create_app():
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(admin_auth_bp)  # No prefix for /adm route
-    # app.register_blueprint(search_bp, url_prefix='/api/search')
+    app.register_blueprint(search_bp, url_prefix='/api/search')
     app.register_blueprint(feed_bp, url_prefix='/api/feed')
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     

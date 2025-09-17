@@ -25,11 +25,10 @@ def search_users():
     search_query = User.query.filter(
         or_(
             User.username.contains(query),
-            User.first_name.contains(query),
-            User.last_name.contains(query),
+            User.display_name.contains(query),
             User.email.contains(query)
         )
-    ).filter_by(is_active=True)
+    ).filter_by(status='active')
     
     # Apply sorting
     if sort_by == 'followers':
@@ -42,8 +41,7 @@ def search_users():
         search_query = search_query.order_by(
             func.case(
                 (User.username == query, 1),
-                (User.first_name == query, 2),
-                (User.last_name == query, 3),
+                (User.display_name == query, 2),
                 else_=4
             )
         )
@@ -175,17 +173,16 @@ def get_search_suggestions():
     users = User.query.filter(
         or_(
             User.username.contains(query),
-            User.first_name.contains(query),
-            User.last_name.contains(query)
+            User.display_name.contains(query)
         )
-    ).filter_by(is_active=True).limit(limit).all()
+    ).filter_by(status='active').limit(limit).all()
     
     for user in users:
         suggestions.append({
             'type': 'user',
             'id': user.id,
-            'title': user.username or f"{user.first_name} {user.last_name}".strip(),
-            'subtitle': user.first_name and user.last_name and user.username or '',
+            'title': user.username or user.display_name or 'User',
+            'subtitle': user.display_name and user.username or '',
             'avatar': user.avatar_url or user.google_picture
         })
     
