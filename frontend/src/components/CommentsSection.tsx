@@ -39,7 +39,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onEdit, onDelete }) 
       <div className="flex-shrink-0">
         <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
           <span className="text-xs font-medium text-white">
-            {comment.author.first_name[0]}{comment.author.last_name[0]}
+            {(comment.author.display_name && comment.author.display_name[0]) || (comment.author.username && comment.author.username[0]) || 'U'}
           </span>
         </div>
       </div>
@@ -49,7 +49,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onEdit, onDelete }) 
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center space-x-2">
               <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {comment.author.first_name} {comment.author.last_name}
+                {comment.author.display_name || comment.author.username || 'User'}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
@@ -191,7 +191,7 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ postId }) => {
         <div className="flex-shrink-0">
           <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
             <span className="text-xs font-medium text-white">
-              {user?.first_name[0]}{user?.last_name[0]}
+              {(user?.display_name && user.display_name[0]) || (user?.username && user.username[0]) || 'U'}
             </span>
           </div>
         </div>

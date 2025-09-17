@@ -91,7 +91,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex items-center space-x-3">
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.first_name} {user?.last_name}
+                    {user?.display_name || user?.username || 'User'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     @{user?.username}
@@ -101,7 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {/* Avatar */}
                 <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
                   <span className="text-sm font-medium text-white">
-                    {user?.first_name?.[0]}{user?.last_name?.[0]}
+                    {(user?.display_name && user.display_name[0]) || (user?.username && user.username[0]) || 'U'}
                   </span>
                 </div>
 

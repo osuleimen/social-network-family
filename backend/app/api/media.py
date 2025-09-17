@@ -19,17 +19,17 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@media_bp.route('/posts/<int:post_id>/media', methods=['POST'])
+@media_bp.route('/posts/<post_id>/media', methods=['POST'])
 @jwt_required()
 def upload_media_to_post(post_id):
     """Upload media files to a post"""
-    current_user_id = int(get_jwt_identity())
+    current_user_id = get_jwt_identity()
     
     # Verify post exists
     post = Post.query.get_or_404(post_id)
     
     # Check if user can upload to this post (post author only)
-    if post.author_id != current_user_id:
+    if str(post.author_id) != current_user_id:
         return jsonify({'error': 'Unauthorized - only post author can upload media'}), 403
     
     # Check if files were uploaded
@@ -75,14 +75,14 @@ def upload_media_to_post(post_id):
                 if upload_result:
                     # Save media info to database
                     media = Media(
-                        filename=upload_result['filename'],
+                        storage_key=upload_result['filename'],
                         original_filename=upload_result['original_filename'],
                         mime_type=upload_result['mime_type'],
                         file_size=upload_result['file_size'],
                         gramps_media_id=upload_result['gramps_media_id'],
                         gramps_url=upload_result['gramps_url'],
                         post_id=post_id,
-                        uploaded_by=current_user_id
+                        owner_id=current_user_id
                     )
                     
                     db.session.add(media)
@@ -109,7 +109,7 @@ def upload_media_to_post(post_id):
     status_code = 201 if uploaded_media else 400
     return jsonify(response_data), status_code
 
-@media_bp.route('/posts/<int:post_id>/media', methods=['GET'])
+@media_bp.route('/posts/<post_id>/media', methods=['GET'])
 @jwt_required()
 def get_post_media(post_id):
     """Get all media files for a post"""
@@ -132,20 +132,20 @@ def get_media(media_id):
 @jwt_required()
 def delete_media(media_id):
     """Delete a media file"""
-    current_user_id = int(get_jwt_identity())
+    current_user_id = get_jwt_identity()
     media = Media.query.get_or_404(media_id)
     
     # Check if user can delete this media (uploader or post author only)
     post = Post.query.get(media.post_id)
-    if media.uploaded_by != current_user_id and post.author_id != current_user_id:
+    if str(media.owner_id) != current_user_id and str(post.author_id) != current_user_id:
         return jsonify({'error': 'Unauthorized'}), 403
     
     # Delete from local storage
     gramps_service = GrampsMediaService()
-    gramps_deleted = gramps_service.delete_media_file(media.filename)
+    gramps_deleted = gramps_service.delete_media_file(media.storage_key)
     
     if not gramps_deleted:
-        logger.warning(f"Failed to delete media from local storage: {media.filename}")
+        logger.warning(f"Failed to delete media from local storage: {media.storage_key}")
         # Continue with database deletion anyway
     
     # Delete from database

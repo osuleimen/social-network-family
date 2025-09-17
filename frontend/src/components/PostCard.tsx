@@ -98,7 +98,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: `Post by ${post.author.first_name} ${post.author.last_name}`,
+        title: `Post by ${post.author.display_name || post.author.username || 'User'}`,
         text: post.content,
         url: window.location.href
       });
@@ -119,12 +119,12 @@ const PostCard = ({ post }: PostCardProps) => {
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center">
             <span className="text-sm font-medium text-white">
-              {post.author.first_name[0]}{post.author.last_name[0]}
+              {(post.author.display_name && post.author.display_name[0]) || (post.author.username && post.author.username[0]) || 'U'}
             </span>
           </div>
           <div>
             <p className="font-medium text-gray-900 dark:text-white">
-              {post.author.first_name} {post.author.last_name}
+              {post.author.display_name || post.author.username || 'User'}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               @{post.author.username} • {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
@@ -177,7 +177,7 @@ const PostCard = ({ post }: PostCardProps) => {
                 </>
               )}
               <div className="flex items-center px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                {post.is_public ? (
+                {post.privacy === 'public' ? (
                   <>
                     <Eye className="h-4 w-4 mr-2" />
                     Public

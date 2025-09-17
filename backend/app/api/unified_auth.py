@@ -54,7 +54,7 @@ def request_code():
     try:
         data = request.get_json()
         logger.info(f"Request data: {data}")
-        identifier = data.get('identifier', '').strip()
+        identifier = data.get('identifier', data.get('phone_number', '')).strip()
         logger.info(f"Extracted identifier: '{identifier}'")
         
         if not identifier:
@@ -154,8 +154,10 @@ def verify_code():
     """Verify code and authenticate user"""
     try:
         data = request.get_json()
-        identifier = data.get('identifier', '').strip()
+        logger.info(f"Verify code request data: {data}")
+        identifier = data.get('identifier', data.get('phone_number', '')).strip()
         code = data.get('code', '').strip()
+        logger.info(f"Extracted identifier: '{identifier}', code: '{code}'")
         
         if not identifier or not code:
             return jsonify({'error': 'Identifier and code are required'}), 400

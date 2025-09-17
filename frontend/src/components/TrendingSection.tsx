@@ -105,3 +105,4 @@ const TrendingSection: React.FC<TrendingSectionProps> = ({
 
 export default TrendingSection;
 
+
