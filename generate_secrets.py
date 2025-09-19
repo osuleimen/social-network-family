@@ -46,7 +46,7 @@ MAIL_SERVER=mail.ozimiz.org
 MAIL_PORT=465
 MAIL_USE_SSL=true
 MAIL_USERNAME=noreply@ozimiz.org
-MAIL_PASSWORD=1tJyh64_4
+MAIL_PASSWORD=your_email_password_here
 MAIL_DEFAULT_SENDER=noreply@ozimiz.org
 
 # Frontend Configuration
