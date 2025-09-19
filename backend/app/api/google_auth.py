@@ -78,8 +78,8 @@ def google_callback():
                 user.auth_method = 'google'
                 if not user.display_name:
                     user.display_name = user_data['first_name'] + ' ' + user_data['last_name']
-                if not user.avatar_url:
-                    user.avatar_url = user_data['picture']
+                # Note: avatar_media_id is used for uploaded avatars, google_picture for Google profile pictures
+                # We don't set avatar_media_id here as it's for uploaded media files
                 db.session.commit()
                 
                 logger.info(f"Updated existing user {user.id} with Google info")
