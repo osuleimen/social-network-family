@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSwitcher from './LanguageSwitcher';
 import { Home, Compass, Search, User, Moon, Sun, LogOut, Bell } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
@@ -13,6 +15,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, setUser } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { t } = useLanguage();
   const location = useLocation();
   // const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -29,10 +32,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const navigation = [
-    { name: 'Feed', href: '/', icon: Home },
-    { name: 'Explore', href: '/explore', icon: Compass },
-    { name: 'Search', href: '/search', icon: Search },
-    { name: 'Profile', href: '/profile', icon: User },
+    { name: t.home, href: '/', icon: Home },
+    { name: t.explore, href: '/explore', icon: Compass },
+    { name: t.search, href: '/search', icon: Search },
+    { name: t.profile, href: '/profile', icon: User },
   ];
 
   return (
@@ -78,6 +81,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Bell className="h-5 w-5" />
                       {/* Notification badge would go here */}
                     </button>
+
+              {/* Language switcher */}
+              <LanguageSwitcher />
 
               {/* Theme toggle */}
               <button

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import UnifiedAuthPage from './pages/UnifiedAuthPage';
 import FeedPage from './pages/FeedPage';
 import ExplorePage from './pages/ExplorePage';
@@ -52,8 +53,9 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
+      <LanguageProvider>
+        <ThemeProvider>
+          <AuthProvider>
           <Router>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
               <Routes>
@@ -122,8 +124,9 @@ function App() {
               </Routes>
             </div>
           </Router>
-        </AuthProvider>
-      </ThemeProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

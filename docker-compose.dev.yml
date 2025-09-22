@@ -4,13 +4,13 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15
-    container_name: social_network_postgres
+    container_name: social_network_postgres_dev
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-social_network}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_dev:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     networks:
@@ -19,7 +19,7 @@ services:
   # Redis for caching and sessions
   redis:
     image: redis:7-alpine
-    container_name: social_network_redis
+    container_name: social_network_redis_dev
     ports:
       - "6380:6379"
     networks:
@@ -30,11 +30,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: social_network_backend
+    container_name: social_network_backend_dev
     env_file:
       - docker.env
     environment:
-      - FLASK_ENV=${FLASK_ENV:-development}
+      - FLASK_ENV=development
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-social_network}
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -43,14 +43,15 @@ services:
       - JWT_ACCESS_TOKEN_EXPIRES=${JWT_ACCESS_TOKEN_EXPIRES:-3600}
       - JWT_REFRESH_TOKEN_EXPIRES=${JWT_REFRESH_TOKEN_EXPIRES:-2592000}
       - MOBIZON_API_KEY=${MOBIZON_API_KEY}
-      - SMS_DEBUG_MODE=${SMS_DEBUG_MODE:-false}
+      - SMS_DEBUG_MODE=${SMS_DEBUG_MODE:-true}
       - SMS_SERVICE_TIMEOUT=${SMS_SERVICE_TIMEOUT:-30}
       - EMAIL_DEBUG_MODE=${EMAIL_DEBUG_MODE:-true}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://my.ozimiz.org/api/auth/google/callback}
-    # ports:
-      # - "5001:5000"  # Убрано - доступ только через системный nginx
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/auth/google/callback}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    ports:
+      - "5001:5000"
     depends_on:
       - postgres
       - redis
@@ -60,16 +61,16 @@ services:
       - ./backend:/app
     command: python run.py
 
-  # Frontend
+  # Frontend (Development)
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-    container_name: social_network_frontend
+      dockerfile: Dockerfile.dev
+    container_name: social_network_frontend_dev
     environment:
-      - VITE_API_URL=${VITE_API_URL:-https://my.ozimiz.org/api}
-    # ports:
-      # - "3001:80"  # Убрано - доступ только через системный nginx
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:5001/api}
+    ports:
+      - "3001:3000"
     depends_on:
       - backend
     networks:
@@ -78,22 +79,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
-  # Nginx reverse proxy - отключен, используется системный nginx
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: social_network_nginx
-  #   ports:
-  #     - "8443:80"
-  #   volumes:
-  #     - ./nginx-simple.conf:/etc/nginx/nginx.conf
-  #   depends_on:
-  #     - backend
-  #     - frontend
-  #   networks:
-  #     - social_network_network
-
 volumes:
-  postgres_data:
+  postgres_data_dev:
 
 networks:
   social_network_network:
