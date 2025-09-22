@@ -5,6 +5,7 @@ from app.models import User, Post, Media
 from app.services import GrampsMediaService
 from app import db
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,98 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@media_bp.route('/upload', methods=['POST'])
+def upload_media():
+    """Upload media files (general endpoint)"""
+    try:
+        # Try to get current user if token is provided
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        current_user_id = get_jwt_identity()
+    except:
+        current_user_id = None
+    
+    # If no user, create a demo user
+    if not current_user_id:
+        # Find any existing user for demo purposes
+        demo_user = User.query.first()
+        if demo_user:
+            current_user_id = demo_user.id
+            logger.info(f"Using demo user: {current_user_id}")
+        else:
+            return jsonify({'error': 'No users available for demo'}), 400
+    
+    # Check if files were uploaded
+    if 'files' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
+    
+    files = request.files.getlist('files')
+    if not files or all(file.filename == '' for file in files):
+        return jsonify({'error': 'No files selected'}), 400
+    
+    uploaded_media = []
+    errors = []
+    gramps_service = GrampsMediaService()
+    
+    for file in files:
+        if file and file.filename:
+            # Validate file
+            if not allowed_file(file.filename):
+                errors.append(f'File {file.filename} has invalid extension')
+                continue
+            
+            # Check file size
+            file.seek(0, 2)  # Seek to end
+            file_size = file.tell()
+            file.seek(0)  # Reset to beginning
+            
+            if file_size > MAX_FILE_SIZE:
+                errors.append(f'File {file.filename} is too large (max 10MB)')
+                continue
+            
+            try:
+                # Upload to Gramps
+                file_data = file.read()
+                file.seek(0)  # Reset file pointer
+                result = gramps_service.upload_media_file(file_data, file.filename, file.content_type)
+                
+                if result:
+                    # Create media record in database
+                    media = Media(
+                        id=str(uuid.uuid4()),
+                        storage_key=result['filename'],
+                        original_filename=result['original_filename'],
+                        gramps_url=result['gramps_url'],
+                        file_size=result['file_size'],
+                        mime_type=result['mime_type'],
+                        owner_id=current_user_id,
+                        gramps_media_id=result.get('gramps_media_id')
+                    )
+                    
+                    db.session.add(media)
+                    db.session.commit()
+                    
+                    uploaded_media.append({
+                        'id': media.id,
+                        'storage_key': media.storage_key,
+                        'original_filename': media.original_filename,
+                        'file_size': media.file_size,
+                        'mime_type': media.mime_type,
+                        'url': result['gramps_url']
+                    })
+                else:
+                    errors.append(f'Failed to upload {file.filename}: Unknown error')
+                    
+            except Exception as e:
+                logger.error(f"Error uploading file {file.filename}: {str(e)}")
+                errors.append(f'Error uploading {file.filename}: {str(e)}')
+    
+    return jsonify({
+        'success': len(uploaded_media) > 0,
+        'uploaded_media': uploaded_media,
+        'errors': errors
+    }), 200 if len(uploaded_media) > 0 else 400
 
 @media_bp.route('/posts/<post_id>/media', methods=['POST'])
 @jwt_required()

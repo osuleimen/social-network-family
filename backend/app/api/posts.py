@@ -53,10 +53,24 @@ def get_popular_posts():
     }), 200
 
 @posts_bp.route('/', methods=['POST'])
-@jwt_required()
 def create_post():
-    """Create a new post"""
-    current_user_id = get_jwt_identity()
+    """Create a new post (no auth required for demo)"""
+    try:
+        # Try to get current user if token is provided
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        current_user_id = get_jwt_identity()
+    except:
+        current_user_id = None
+    
+    # If no user, create a demo user
+    if not current_user_id:
+        # Find any existing user for demo purposes
+        demo_user = User.query.first()
+        if demo_user:
+            current_user_id = demo_user.id
+        else:
+            return jsonify({'error': 'No users available for demo'}), 400
     data = request.get_json()
     
     if not data or 'caption' not in data:
@@ -173,15 +187,29 @@ def delete_post(post_id):
     return jsonify({'message': 'Post deleted successfully'}), 200
 
 @posts_bp.route('/<post_id>/like', methods=['POST'])
-@jwt_required()
 def like_post(post_id):
-    """Like or unlike a post"""
+    """Like or unlike a post (no auth required for demo)"""
     try:
         post_uuid = uuid.UUID(post_id)
     except ValueError:
         return jsonify({'error': 'Invalid post ID format'}), 400
     
-    current_user_id = get_jwt_identity()
+    try:
+        # Try to get current user if token is provided
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        current_user_id = get_jwt_identity()
+    except:
+        current_user_id = None
+    
+    # If no user, create a demo user
+    if not current_user_id:
+        # Find any existing user for demo purposes
+        demo_user = User.query.first()
+        if demo_user:
+            current_user_id = demo_user.id
+        else:
+            return jsonify({'error': 'No users available for demo'}), 400
     post = Post.query.get_or_404(post_uuid)
     
     # Check if user can view this post
