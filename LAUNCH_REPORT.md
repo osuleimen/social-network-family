@@ -138,11 +138,11 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```bash
 # Запуск сервера
 cd /opt/grampsweb/social_network/backend
-export DATABASE_URL="postgresql://social_user:social_secure_password_2024@localhost:5433/social_network"
-export SECRET_KEY="social_super_secret_key_change_this_in_production_2024"
-export JWT_SECRET_KEY="social_jwt_secret_key_change_this_in_production_2024"
+export DATABASE_URL="postgresql://social_user:${POSTGRES_PASSWORD}@localhost:5433/social_network"
+export SECRET_KEY="${SECRET_KEY}"
+export JWT_SECRET_KEY="${JWT_SECRET_KEY}"
 export REDIS_URL="redis://localhost:6380/0"
-export GEMINI_API_KEY="AIzaSyA97egq5Mp9EVttZydEhJHvVrWxTD7v5u8"
+export GEMINI_API_KEY="${GEMINI_API_KEY}"
 python3 run.py
 
 # Остановка сервера
