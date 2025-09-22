@@ -102,10 +102,15 @@ def get_popular_feed():
     }), 200
 
 @feed_bp.route('/explore', methods=['GET'])
-@jwt_required()
 def get_explore_feed():
-    """Get explore feed (popular posts from all users)"""
-    current_user_id = get_jwt_identity()
+    """Get explore feed (popular posts from all users) - no auth required for demo"""
+    try:
+        # Try to get current user if token is provided
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        current_user_id = get_jwt_identity()
+    except:
+        current_user_id = None
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     category = request.args.get('category', 'all')  # all, trending, recent

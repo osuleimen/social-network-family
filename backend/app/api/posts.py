@@ -9,10 +9,16 @@ import uuid
 posts_bp = Blueprint('posts', __name__)
 
 @posts_bp.route('/', methods=['GET'])
-@jwt_required()
 def get_posts():
-    """Get all posts"""
-    current_user_id = get_jwt_identity()
+    """Get all public posts (no auth required for demo)"""
+    try:
+        # Try to get current user if token is provided
+        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        verify_jwt_in_request(optional=True)
+        current_user_id = get_jwt_identity()
+    except:
+        current_user_id = None
+    
     posts = Post.query.filter_by(privacy=PostPrivacy.PUBLIC, is_deleted=False).order_by(Post.created_at.desc()).all()
     return jsonify({'posts': [post.to_dict(requesting_user=current_user_id) for post in posts]}), 200
 
