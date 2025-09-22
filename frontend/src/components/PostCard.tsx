@@ -19,7 +19,7 @@ const PostCard = ({ post }: PostCardProps) => {
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(post.content);
+  const [editContent, setEditContent] = useState(post.caption || post.content || '');
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -78,11 +78,11 @@ const PostCard = ({ post }: PostCardProps) => {
   };
 
   const handleUpdate = () => {
-    if (editContent.trim() && editContent !== post.content) {
+    if (editContent.trim() && editContent !== (post.caption || post.content)) {
       updateMutation.mutate(editContent);
     } else {
       setIsEditing(false);
-      setEditContent(post.content);
+      setEditContent(post.caption || post.content || '');
     }
   };
 
@@ -99,7 +99,7 @@ const PostCard = ({ post }: PostCardProps) => {
     if (navigator.share) {
       navigator.share({
         title: `Post by ${post.author.display_name || post.author.username || 'User'}`,
-        text: post.content,
+        text: post.caption || post.content || '',
         url: window.location.href
       });
     } else {
@@ -215,7 +215,7 @@ const PostCard = ({ post }: PostCardProps) => {
               <button
                 onClick={() => {
                   setIsEditing(false);
-                  setEditContent(post.content);
+                  setEditContent(post.caption || post.content || '');
                 }}
                 className="btn btn-secondary text-sm"
               >
@@ -224,7 +224,7 @@ const PostCard = ({ post }: PostCardProps) => {
             </div>
           </div>
         ) : (
-          <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{post.content}</p>
+          <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{post.caption || post.content || ''}</p>
         )}
       </div>
 

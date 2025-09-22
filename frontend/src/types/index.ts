@@ -1,12 +1,14 @@
 export interface User {
-  id: number;
+  id: string;
   username?: string;
   email?: string;
   display_name?: string;
   bio?: string;
   avatar_url?: string;
-  is_active: boolean;
-  is_verified: boolean;
+  avatar_media_id?: string;
+  is_active?: boolean;
+  is_verified?: boolean;
+  verified?: boolean;
   created_at: string;
   gramps_person_id?: string;
   gramps_tree_id?: string;
@@ -21,33 +23,44 @@ export interface User {
   banned_until?: string;
   ban_reason?: string;
   birth_date?: string;
+  date_of_birth?: string;
   updated_at?: string;
+  private_account?: boolean;
+  profile_slug?: string;
+  pronouns?: string;
+  status?: string;
+  website?: string;
+  location?: string;
 }
 
 export interface Media {
-  id: number;
-  filename: string;
+  id: string;
+  filename?: string;
+  storage_key?: string;
   original_filename: string;
   mime_type: string;
   file_size: number;
   gramps_media_id?: string;
   gramps_url?: string;
-  post_id: number;
-  uploaded_by: number;
-  uploader: User;
+  url?: string;
+  post_id?: string;
+  uploaded_by?: number;
+  uploader?: User;
   created_at: string;
 }
 
 export interface Post {
-  id: number;
-  content: string;
+  id: string;
+  caption: string;
+  content?: string; // For backward compatibility
   privacy: string;
   created_at: string;
   updated_at: string;
   author: User;
+  author_id: string;
   likes_count: number;
   comments_count: number;
-  user_liked: boolean;
+  user_liked?: boolean;
   media: Media[];
   visibility?: string;
   hashtags?: string[];
@@ -59,6 +72,7 @@ export interface Post {
   ai_generated_hashtags?: string[];
   is_edited?: boolean;
   edit_count?: number;
+  is_deleted?: boolean;
 }
 
 export interface Comment {

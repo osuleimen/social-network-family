@@ -120,10 +120,11 @@ class ApiClient {
   }
 
   // Post endpoints
-  async createPost(postData: { content: string; is_public?: boolean }) {
+  async createPost(postData: { content: string; is_public?: boolean; media?: any[] }) {
     const response = await this.client.post('/posts/', {
       caption: postData.content,
-      privacy: postData.is_public ? 'public' : 'private'
+      privacy: postData.is_public ? 'public' : 'private',
+      media: postData.media || []
     });
     return response.data;
   }
@@ -201,6 +202,20 @@ class ApiClient {
 
   async getMediaUrl(mediaId: number) {
     const response = await this.client.get(`/media/${mediaId}/url`);
+    return response.data;
+  }
+
+  async uploadMedia(files: FileList) {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    const response = await this.client.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   }
 
